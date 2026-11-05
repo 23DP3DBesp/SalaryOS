@@ -14,6 +14,8 @@ public enum RepositoryError: Error, Equatable {
     case invalidReversal(UUID)
     case alreadyReversed(UUID)
     case budgetCategoryMustBeExpense(UUID)
+    case debtNotFound(UUID)
+    case debtPaymentNotFound(UUID)
 }
 
 @MainActor
@@ -46,4 +48,14 @@ public protocol BudgetRepository: AnyObject {
     func budget(id: UUID) throws -> Budget?
     func budgets(includeArchived: Bool) throws -> [Budget]
     func progress(for budget: Budget, on date: Date, calendar: Calendar) throws -> BudgetProgress
+}
+
+@MainActor
+public protocol DebtRepository: AnyObject {
+    func save(_ debt: Debt) throws
+    func debt(id: UUID) throws -> Debt?
+    func debts(includeArchived: Bool) throws -> [Debt]
+    func record(_ payment: DebtPayment) throws
+    func payments(for debtID: UUID) throws -> [DebtPayment]
+    func summary(for debtID: UUID) throws -> DebtSummary
 }

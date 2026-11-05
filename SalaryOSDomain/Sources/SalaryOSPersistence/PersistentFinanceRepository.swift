@@ -143,16 +143,87 @@ final class PersistedBudget {
     }
 }
 
+@Model
+final class PersistedDebt {
+    var id: UUID
+    var name: String
+    var counterparty: String
+    var directionRawValue: String
+    var currencyCode: String
+    var principalAmount: Decimal
+    var createdAt: Date
+    var dueDate: Date?
+    var notes: String?
+    var updatedAt: Date
+    var isArchived: Bool
+
+    init(_ debt: Debt) {
+        id = debt.id
+        name = debt.name
+        counterparty = debt.counterparty
+        directionRawValue = debt.direction.rawValue
+        currencyCode = debt.principal.currency.code
+        principalAmount = debt.principal.amount
+        createdAt = debt.createdAt
+        dueDate = debt.dueDate
+        notes = debt.notes
+        updatedAt = debt.updatedAt
+        isArchived = debt.isArchived
+    }
+
+    func domainValue() throws -> Debt {
+        guard let direction = DebtDirection(rawValue: directionRawValue) else {
+            throw PersistenceMappingError.invalidDebtDirection(directionRawValue)
+        }
+        return try Debt(
+            id: id, name: name, counterparty: counterparty, direction: direction,
+            principal: Money(principalAmount, currency: Currency(code: currencyCode)),
+            createdAt: createdAt, dueDate: dueDate, notes: notes,
+            updatedAt: updatedAt, isArchived: isArchived
+        )
+    }
+}
+
+@Model
+final class PersistedDebtPayment {
+    var id: UUID
+    var debtID: UUID
+    var currencyCode: String
+    var amount: Decimal
+    var paidAt: Date
+    var note: String?
+    var createdAt: Date
+
+    init(_ payment: DebtPayment) {
+        id = payment.id
+        debtID = payment.debtID
+        currencyCode = payment.amount.currency.code
+        amount = payment.amount.amount
+        paidAt = payment.paidAt
+        note = payment.note
+        createdAt = payment.createdAt
+    }
+
+    func domainValue() throws -> DebtPayment {
+        try DebtPayment(
+            id: id, debtID: debtID,
+            amount: Money(amount, currency: Currency(code: currencyCode)),
+            paidAt: paidAt, note: note, createdAt: createdAt
+        )
+    }
+}
+
 enum PersistenceMappingError: Error {
     case invalidAccountType(String)
     case invalidCategoryKind(String)
     case invalidTransactionKind(String)
     case invalidBudgetPeriod(String)
+    case invalidDebtDirection(String)
 }
 
 /// Keeps each posting and its entries in one persisted record so they are saved atomically.
 @MainActor
-final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository {
+final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository, DebtRepository {
     private let context: ModelContext
     private let encoder = JSONEncoder()
 
@@ -362,6 +433,71 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         )
     }
 
+    func save(_ debt: Debt) throws {
+        let records = try context.fetch(FetchDescriptor<PersistedDebt>())
+        try ensureUniqueIDs(records)
+        let existingPayments = try context.fetch(FetchDescriptor<PersistedDebtPayment>()).filter { $0.debtID == debt.id }.map { try $0.domainValue() }
+        _ = try DebtSummary(debt: debt, payments: existingPayments)
+        if let existing = records.first(where: { $0.id == debt.id }) {
+            guard existing.directionRawValue == debt.direction.rawValue,
+                  existing.currencyCode == debt.principal.currency.code,
+                  existing.principalAmount == debt.principal.amount,
+                  existing.createdAt == debt.createdAt else {
+                throw RepositoryError.invalidLedgerReference(debt.id)
+            }
+            existing.name = debt.name
+            existing.counterparty = debt.counterparty
+            existing.dueDate = debt.dueDate
+            existing.notes = debt.notes
+            existing.updatedAt = .now
+            existing.isArchived = debt.isArchived
+        } else {
+            context.insert(PersistedDebt(debt))
+        }
+        try commit()
+    }
+
+    func debt(id: UUID) throws -> Debt? {
+        let records = try context.fetch(FetchDescriptor<PersistedDebt>())
+        try ensureUniqueIDs(records)
+        return try records.first(where: { $0.id == id })?.domainValue()
+    }
+
+    func debts(includeArchived: Bool = false) throws -> [Debt] {
+        let records = try context.fetch(FetchDescriptor<PersistedDebt>())
+        try ensureUniqueIDs(records)
+        return try records.filter { includeArchived || !$0.isArchived }.map { try $0.domainValue() }
+    }
+
+    func record(_ payment: DebtPayment) throws {
+        let debtRecords = try context.fetch(FetchDescriptor<PersistedDebt>())
+        try ensureUniqueIDs(debtRecords)
+        guard let debtRecord = debtRecords.first(where: { $0.id == payment.debtID }) else {
+            throw RepositoryError.debtNotFound(payment.debtID)
+        }
+        let paymentRecords = try context.fetch(FetchDescriptor<PersistedDebtPayment>())
+        try ensureUniqueIDs(paymentRecords)
+        guard !paymentRecords.contains(where: { $0.id == payment.id }) else {
+            throw RepositoryError.duplicateIdentifier(payment.id)
+        }
+        let debt = try debtRecord.domainValue()
+        let priorPayments = try paymentRecords.filter { $0.debtID == debt.id }.map { try $0.domainValue() }
+        _ = try DebtSummary(debt: debt, payments: priorPayments).recording(payment)
+        context.insert(PersistedDebtPayment(payment))
+        try commit()
+    }
+
+    func payments(for debtID: UUID) throws -> [DebtPayment] {
+        let records = try context.fetch(FetchDescriptor<PersistedDebtPayment>())
+        try ensureUniqueIDs(records)
+        return try records.filter { $0.debtID == debtID }.map { try $0.domainValue() }.sorted { $0.paidAt > $1.paidAt }
+    }
+
+    func summary(for debtID: UUID) throws -> DebtSummary {
+        guard let debt = try debt(id: debtID) else { throw RepositoryError.debtNotFound(debtID) }
+        return try DebtSummary(debt: debt, payments: payments(for: debtID))
+    }
+
 
     private func ensureUniqueIDs<Record: Identifiable>(_ records: [Record]) throws where Record.ID == UUID {
         var identifiers = Set<UUID>()
@@ -479,10 +615,10 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
 @MainActor
 public final class FinancePersistenceStack {
     public let modelContainer: ModelContainer
-    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository
+    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository
 
     public init(inMemory: Bool = false) throws {
-        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self])
+        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         modelContainer = container
