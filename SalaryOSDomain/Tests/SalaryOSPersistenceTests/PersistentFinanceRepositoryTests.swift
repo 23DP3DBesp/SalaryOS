@@ -104,4 +104,43 @@ final class PersistentFinanceRepositoryTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testReverseAndCorrectAreAuditableAndAtomic() throws {
+        let stack = try FinancePersistenceStack(inMemory: true)
+        let repository = stack.repository
+        let eur = try Currency(code: "EUR")
+        let bank = try Account(name: "Bank", type: .current, currency: eur, openingBalance: Money(Decimal(10), currency: eur))
+        let salary = try Category(name: "Salary", kind: .income)
+        try repository.save(bank)
+        try repository.save(salary)
+        let original = try LedgerFactory.income(
+            amount: Money(Decimal(90), currency: eur), to: bank,
+            categoryID: salary.id, description: "Old amount"
+        )
+        try repository.post(original)
+        let invalidReplacement = try LedgerFactory.income(
+            amount: Money(Decimal(100), currency: eur), to: bank,
+            categoryID: UUID(), description: "Missing category"
+        )
+        XCTAssertThrowsError(try repository.correct(
+            postingID: original.id, reversingDescription: "Rejected correction", replacingWith: invalidReplacement
+        ))
+        XCTAssertEqual(try repository.postings(from: nil, through: nil).count, 1)
+        XCTAssertEqual(try repository.balance(for: bank).amount, Decimal(100))
+
+        let corrected = try LedgerFactory.income(
+            amount: Money(Decimal(100), currency: eur), to: bank,
+            categoryID: salary.id, description: "Corrected amount"
+        )
+        try repository.correct(postingID: original.id, reversingDescription: "Correct old amount", replacingWith: corrected)
+
+        let postings = try repository.postings(from: nil, through: nil)
+        XCTAssertEqual(postings.count, 3)
+        XCTAssertTrue(postings.contains { $0.kind == .reversal && $0.relatedPostingID == original.id })
+        XCTAssertEqual(try repository.balance(for: bank).amount, Decimal(110))
+        XCTAssertThrowsError(try repository.reverse(postingID: original.id, description: "Again", occurredAt: .now)) { error in
+            XCTAssertEqual(error as? RepositoryError, .alreadyReversed(original.id))
+        }
+    }
+
 }

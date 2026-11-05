@@ -80,6 +80,16 @@ final class FinancialCoreTests: XCTestCase {
         }
     }
 
+    func testReversalFactorySwapsSidesAndPreservesAmounts() throws {
+        let bank = try account("Bank")
+        let original = try LedgerFactory.expense(amount: money("25"), from: bank, categoryID: UUID(), description: "Purchase")
+        let reversal = try LedgerFactory.reversal(of: original, description: "Correction")
+        XCTAssertEqual(reversal.kind, .reversal)
+        XCTAssertEqual(reversal.relatedPostingID, original.id)
+        XCTAssertEqual(reversal.entries.map(\.side), [.credit, .debit])
+        XCTAssertEqual(reversal.entries.map(\.money), original.entries.map(\.money))
+    }
+
     func testCodableDecodingRevalidatesMoneyAndLedgerInvariants() throws {
         let valid = try money("1.23")
         let encoded = try JSONEncoder().encode(valid)

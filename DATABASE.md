@@ -6,7 +6,7 @@
 - **Category:** stable UUID, name, income/expense kind, optional same-kind parent, archive state, and timestamps.
 - **Ledger posting:** stable UUID, operation kind, occurrence and creation timestamps, description/notes, optional related posting, and the complete encoded entry list.
 
-Each posting and its entries are stored in one SwiftData record and saved together. The account/category/posting ID uniqueness checks happen in the repository; no CloudKit uniqueness constraint is used. Corrections do not mutate posted entries. Reversal and adjustment workflows will be added in a later milestone.
+Each posting and its entries are stored in one SwiftData record and saved together. Account/category/posting ID uniqueness checks happen in the repository; no CloudKit uniqueness constraint is used. Corrections preserve the original posting, append an exact side-swapped reversal, then append the corrected posting in one save. A failed correction adds neither record.
 
 ## Money and balances
 
@@ -21,7 +21,9 @@ A debit increases the signed balance; a credit decreases it. That gives expected
 - Expense: debit an expense category, credit an asset or liability account.
 - Transfer: debit one personal account and credit another. It does not affect income or expense totals.
 - Refund: debit an asset or liability account and credit the original expense category. The repository requires a persisted original expense and prevents cumulative refunds from exceeding the original amount by category.
-- Adjustment: available as a balanced low-level posting; dedicated correction workflows and audit metadata are future work.
+- Reversal: an exact side-swapped posting linked to its original. It can be applied once. An expense with an existing refund cannot be reversed.
+- Correction: appends a reversal and a replacement posting atomically; neither the original nor its prior entries are edited or deleted.
+- Adjustment: available as a balanced low-level posting; a dedicated UI correction workflow for arbitrary adjustments is future work.
 - A posting currently contains a single currency. Cross-currency transfers are rejected until explicit FX clearing entries, exchange-rate snapshots, and rounding rules are implemented.
 
 Archived accounts/categories remain available to historical postings but cannot receive new postings. Category kind and account accounting definition cannot change under an existing ID.

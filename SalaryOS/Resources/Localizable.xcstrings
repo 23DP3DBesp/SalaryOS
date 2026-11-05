@@ -3,9 +3,9 @@
   "strings" : {
     "dashboard.empty.description" : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your financial overview will appear here once you add your data." } },
-        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Jūsu finanšu pārskats būs pieejams pēc datu pievienošanas." } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Здесь появится финансовый обзор после добавления данных." } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add an account to start tracking your finances." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pievienojiet kontu, lai sāktu pārvaldīt finanses." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Добавьте счёт, чтобы начать вести финансы." } }
       }
     },
     "dashboard.empty.title" : {
@@ -31,9 +31,884 @@
     },
     "navigation.dashboard" : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dashboard" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Overview" } },
         "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pārskats" } },
         "ru" : { "stringUnit" : { "state" : "translated", "value" : "Обзор" } }
+      }
+    },
+    "account-type.current" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Norēķinu konts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Текущий счёт" } }
+      }
+    },
+    "account-type.savings" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Savings account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Krājkonts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Накопительный счёт" } }
+      }
+    },
+    "account-type.cash" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cash" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Skaidra nauda" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Наличные" } }
+      }
+    },
+    "account-type.credit-card" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Credit card" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Kredītkarte" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Кредитная карта" } }
+      }
+    },
+    "account-type.investment" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Investment account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Ieguldījumu konts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Инвестиционный счёт" } }
+      }
+    },
+    "account-type.loan" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Loan" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Aizdevums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Кредит" } }
+      }
+    },
+    "account-type.other" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Other account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Cits konts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Другой счёт" } }
+      }
+    },
+    "accounts.add" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pievienot kontu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Добавить счёт" } }
+      }
+    },
+    "accounts.add-title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "New account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Jauns konts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Новый счёт" } }
+      }
+    },
+    "accounts.archived-badge" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Archived" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Arhivēts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "В архиве" } }
+      }
+    },
+    "accounts.archived-section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Archived accounts" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Arhivētie konti" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Архивные счета" } }
+      }
+    },
+    "accounts.edit-title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Rediģēt kontu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Изменить счёт" } }
+      }
+    },
+    "accounts.empty-archived.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Archived accounts will appear here." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Šeit būs redzami arhivētie konti." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Здесь будут показаны архивные счета." } }
+      }
+    },
+    "accounts.empty-archived.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No archived accounts" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Nav arhivētu kontu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Нет архивных счетов" } }
+      }
+    },
+    "accounts.empty.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add an account to start tracking balances." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pievienojiet kontu, lai sāktu uzskaitīt atlikumus." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Добавьте счёт, чтобы начать учитывать остатки." } }
+      }
+    },
+    "accounts.empty.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No accounts yet" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Kontu vēl nav" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Счетов пока нет" } }
+      }
+    },
+    "accounts.error.invalid-opening" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter a valid opening balance." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Ievadiet derīgu sākuma atlikumu." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Введите корректный начальный остаток." } }
+      }
+    },
+    "accounts.field.currency" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Currency (ISO 4217)" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Valūta (ISO 4217)" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Валюта (ISO 4217)" } }
+      }
+    },
+    "accounts.field.details" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Description" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Apraksts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Описание" } }
+      }
+    },
+    "accounts.field.institution" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Bank or institution" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Banka vai iestāde" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Банк или организация" } }
+      }
+    },
+    "accounts.field.name" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Account name" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Konta nosaukums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Название счёта" } }
+      }
+    },
+    "accounts.field.opening-balance" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Opening balance" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Sākuma atlikums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Начальный остаток" } }
+      }
+    },
+    "accounts.field.opening-debt" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Opening debt" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Sākuma parāds" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Начальная задолженность" } }
+      }
+    },
+    "accounts.field.type" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Account type" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Konta veids" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Тип счёта" } }
+      }
+    },
+    "accounts.filters" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Account filters" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Kontu filtri" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Фильтры счетов" } }
+      }
+    },
+    "accounts.opening-immutable" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The opening balance is fixed for this account. Record changes as transactions." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Sākuma atlikums šim kontam ir nemainīgs. Izmaiņas reģistrējiet kā darījumus." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Начальный остаток этого счёта нельзя изменить. Корректировки записывайте как операции." } }
+      }
+    },
+    "accounts.search" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Name or institution" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Nosaukums vai iestāde" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Название или организация" } }
+      }
+    },
+    "accounts.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accounts" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Konti" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Счета" } }
+      }
+    },
+    "accounts.section.balance" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Balance" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Atlikums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Остаток" } }
+      }
+    },
+    "accounts.section.identity" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Account details" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Konta informācija" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Данные счёта" } }
+      }
+    },
+    "accounts.section.opening" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Opening balance" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Sākuma atlikums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Начальный остаток" } }
+      }
+    },
+    "accounts.show-archived" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show archived" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Rādīt arhivētos" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Показывать архивные" } }
+      }
+    },
+    "common.cancel" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Atcelt" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Отмена" } }
+      }
+    },
+    "common.done" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Done" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Gatavs" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Готово" } }
+      }
+    },
+    "common.error-title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not complete action" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Darbību neizdevās pabeigt" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не удалось выполнить действие" } }
+      }
+    },
+    "common.save" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Save" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Saglabāt" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сохранить" } }
+      }
+    },
+    "common.unknown-error" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "An unexpected error occurred." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Radās neparedzēta kļūda." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Произошла непредвиденная ошибка." } }
+      }
+    },
+    "common.view-all" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "View all" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Skatīt visu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Показать все" } }
+      }
+    },
+    "dashboard.expenses-this-month" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Expenses this month" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Šī mēneša izdevumi" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Расходы за месяц" } }
+      }
+    },
+    "dashboard.income-this-month" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Income this month" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Šī mēneša ienākumi" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Доходы за месяц" } }
+      }
+    },
+    "dashboard.no-cashflow" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No income or expenses recorded this month." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Šomēnes nav reģistrēti ienākumi vai izdevumi." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "В этом месяце доходы и расходы не записаны." } }
+      }
+    },
+    "dashboard.no-recent-transactions" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No transactions yet." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Darījumu vēl nav." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Операций пока нет." } }
+      }
+    },
+    "dashboard.section.accounts" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accounts" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Konti" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Счета" } }
+      }
+    },
+    "dashboard.section.overview" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Financial overview" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Finanšu pārskats" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Финансовый обзор" } }
+      }
+    },
+    "dashboard.section.recent" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Recent transactions" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pēdējie darījumi" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Последние операции" } }
+      }
+    },
+    "dashboard.total-balance" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Total balance" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Kopējais atlikums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Общий остаток" } }
+      }
+    },
+    "ledger-kind.asset" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Asset account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Aktīvu konts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Счёт актива" } }
+      }
+    },
+    "ledger-kind.expense" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Expense category" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Izdevumu kategorija" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Категория расходов" } }
+      }
+    },
+    "ledger-kind.income" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Income category" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Ienākumu kategorija" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Категория доходов" } }
+      }
+    },
+    "ledger-kind.liability" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Liability account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Saistību konts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Счёт обязательств" } }
+      }
+    },
+    "ledger-side.credit" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Credit" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Kredīts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Кредит" } }
+      }
+    },
+    "ledger-side.debit" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Debit" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Debets" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Дебет" } }
+      }
+    },
+    "navigation.accounts" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accounts" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Konti" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Счета" } }
+      }
+    },
+    "navigation.transactions" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Transactions" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Darījumi" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Операции" } }
+      }
+    },
+    "transaction-kind.adjustment" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Adjustment" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Korekcija" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Корректировка" } }
+      }
+    },
+    "transaction-kind.expense" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Expense" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Izdevumi" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Расход" } }
+      }
+    },
+    "transaction-kind.income" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Income" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Ienākumi" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Доход" } }
+      }
+    },
+    "transaction-kind.refund" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Refund" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Atmaksa" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Возврат" } }
+      }
+    },
+    "transaction-kind.transfer" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Transfer" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pārskaitījums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Перевод" } }
+      }
+    },
+    "transactions.add" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add transaction" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pievienot darījumu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Добавить операцию" } }
+      }
+    },
+    "transactions.add-title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "New transaction" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Jauns darījums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Новая операция" } }
+      }
+    },
+    "transactions.category.add" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add category" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pievienot kategoriju" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Добавить категорию" } }
+      }
+    },
+    "transactions.category.add-title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "New category" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Jauna kategorija" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Новая категория" } }
+      }
+    },
+    "transactions.category.name" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Category name" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Kategorijas nosaukums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Название категории" } }
+      }
+    },
+    "transactions.details.date" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Date" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Datums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Дата" } }
+      }
+    },
+    "transactions.details.entries" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ledger entries" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Grāmatojumi" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Проводки" } }
+      }
+    },
+    "transactions.details.notes" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Notes" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Piezīmes" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Примечания" } }
+      }
+    },
+    "transactions.details.related-id" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Related transaction" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Saistītais darījums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Связанная операция" } }
+      }
+    },
+    "transactions.details.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Transaction details" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Darījuma informācija" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Детали операции" } }
+      }
+    },
+    "transactions.details.type" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Type" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Veids" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Тип" } }
+      }
+    },
+    "transactions.empty.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Record income, expenses, transfers, and refunds to see them here." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Reģistrējiet ienākumus, izdevumus, pārskaitījumus un atmaksas." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Записывайте доходы, расходы, переводы и возвраты." } }
+      }
+    },
+    "transactions.empty.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No transactions yet" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Darījumu vēl nav" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Операций пока нет" } }
+      }
+    },
+    "transactions.error.choose-destination" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose a destination account." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Izvēlieties saņēmēja kontu." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Выберите счёт назначения." } }
+      }
+    },
+    "transactions.error.choose-original" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose the original expense for this refund." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Izvēlieties sākotnējo izdevumu šai atmaksai." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Выберите исходный расход для возврата." } }
+      }
+    },
+    "transactions.error.invalid-amount" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter a valid amount." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Ievadiet derīgu summu." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Введите корректную сумму." } }
+      }
+    },
+    "transactions.error.positive-amount" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The amount must be greater than zero." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Summai jābūt lielākai par nulli." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сумма должна быть больше нуля." } }
+      }
+    },
+    "transactions.field.account" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Konts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Счёт" } }
+      }
+    },
+    "transactions.field.amount" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Amount" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Summa" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сумма" } }
+      }
+    },
+    "transactions.field.category" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Category" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Kategorija" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Категория" } }
+      }
+    },
+    "transactions.field.choose-account" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose an account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Izvēlieties kontu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Выберите счёт" } }
+      }
+    },
+    "transactions.field.choose-category" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose a category" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Izvēlieties kategoriju" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Выберите категорию" } }
+      }
+    },
+    "transactions.field.choose-expense" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose an expense" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Izvēlieties izdevumu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Выберите расход" } }
+      }
+    },
+    "transactions.field.currency" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Currency" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Valūta" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Валюта" } }
+      }
+    },
+    "transactions.field.date" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Date and time" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Datums un laiks" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Дата и время" } }
+      }
+    },
+    "transactions.field.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Description" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Apraksts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Описание" } }
+      }
+    },
+    "transactions.field.from-account" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "From account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "No konta" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Со счёта" } }
+      }
+    },
+    "transactions.field.notes" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Notes" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Piezīmes" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Примечания" } }
+      }
+    },
+    "transactions.field.original-expense" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Original expense" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Sākotnējais izdevums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Исходный расход" } }
+      }
+    },
+    "transactions.field.to-account" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "To account" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Uz kontu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "На счёт" } }
+      }
+    },
+    "transactions.field.type" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Operation" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Darbība" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Операция" } }
+      }
+    },
+    "transactions.filter.all" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "All types" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Visi veidi" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Все типы" } }
+      }
+    },
+    "transactions.filter.kind" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Filter by type" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Filtrēt pēc veida" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Фильтр по типу" } }
+      }
+    },
+    "transactions.no-accounts.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Create an account first, then record the transaction." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Vispirms izveidojiet kontu, pēc tam reģistrējiet darījumu." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сначала создайте счёт, затем добавьте операцию." } }
+      }
+    },
+    "transactions.no-accounts.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "An account is required" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Nepieciešams konts" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Нужен счёт" } }
+      }
+    },
+    "transactions.no-categories.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add a category to classify this transaction." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pievienojiet kategoriju, lai klasificētu darījumu." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Добавьте категорию для этой операции." } }
+      }
+    },
+    "transactions.no-categories.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "A category is required" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Nepieciešama kategorija" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Нужна категория" } }
+      }
+    },
+    "transactions.open-details-hint" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Opens the transaction ledger entries." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Atver darījuma grāmatojumus." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Открывает проводки операции." } }
+      }
+    },
+    "transactions.search" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Description, account, or category" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Apraksts, konts vai kategorija" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Описание, счёт или категория" } }
+      }
+    },
+    "transactions.section.details" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Details" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Informācija" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Детали" } }
+      }
+    },
+    "transactions.section.operation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Operation" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Darbība" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Операция" } }
+      }
+    },
+    "dashboard.widget.overview" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Overview" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pārskats" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Обзор" } }
+      }
+    },
+    "dashboard.widget.accounts" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accounts" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Konti" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Счета" } }
+      }
+    },
+    "dashboard.widget.cashflow" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cash flow" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Naudas plūsma" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Денежный поток" } }
+      }
+    },
+    "dashboard.widget.recent" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Recent transactions" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pēdējie darījumi" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Последние операции" } }
+      }
+    },
+    "dashboard.customize" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Customize dashboard" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pielāgot pārskatu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Настроить обзор" } }
+      }
+    },
+    "dashboard.customize-title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dashboard widgets" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pārskata logrīki" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Виджеты обзора" } }
+      }
+    },
+    "dashboard.no-data" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No financial data available." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Finanšu dati nav pieejami." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Финансовые данные отсутствуют." } }
+      }
+    },
+    "dashboard.section.cashflow" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Income and expenses · last 6 months" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Ienākumi un izdevumi · pēdējie 6 mēneši" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Доходы и расходы · последние 6 месяцев" } }
+      }
+    },
+    "dashboard.no-chart-data" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add income or expense transactions to see a chart." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pievienojiet ienākumu vai izdevumu darījumus, lai skatītu diagrammu." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Добавьте доходы или расходы, чтобы увидеть диаграмму." } }
+      }
+    },
+    "dashboard.chart.month" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Month" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Mēnesis" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Месяц" } }
+      }
+    },
+    "dashboard.chart.income" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Income" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Ienākumi" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Доходы" } }
+      }
+    },
+    "dashboard.chart.expenses" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Expenses" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Izdevumi" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Расходы" } }
+      }
+    },
+    "dashboard.chart.series" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Transaction type" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Darījuma veids" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Тип операции" } }
+      }
+    },
+    "transaction-kind.reversal" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reversal" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Storno darījums" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сторно" } }
+      }
+    },
+    "transactions.details.actions" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Actions" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Darbības" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Действия" } }
+      }
+    },
+    "transactions.duplicate" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Duplicate" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Dublēt" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Дублировать" } }
+      }
+    },
+    "transactions.edit" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Correct transaction" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Labot darījumu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Исправить операцию" } }
+      }
+    },
+    "transactions.edit-title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Correct transaction" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Labot darījumu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Исправление операции" } }
+      }
+    },
+    "transactions.reverse" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reverse transaction" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Stornēt darījumu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сторнировать операцию" } }
+      }
+    },
+    "transactions.reverse.confirm" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reverse" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Stornēt" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сторнировать" } }
+      }
+    },
+    "transactions.reverse.confirmation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This adds an opposite ledger posting. The original transaction stays in your history." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Tiks pievienots pretējs grāmatojums. Sākotnējais darījums paliks vēsturē." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Будет добавлена обратная проводка. Исходная операция останется в истории." } }
+      }
+    },
+    "transactions.reversal.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reversal" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Storno" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сторно" } }
+      }
+    },
+    "transactions.reversal.for-correction" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reversal for corrected transaction" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Storno labotam darījumam" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сторно исправленной операции" } }
+      }
+    },
+    "dashboard.no-widgets.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "All widgets are hidden" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Visi logrīki ir paslēpti" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Все виджеты скрыты" } }
+      }
+    },
+    "dashboard.no-widgets.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose which financial summaries to show." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Izvēlieties, kurus finanšu rādītājus rādīt." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Выберите финансовые сводки для отображения." } }
       }
     }
   },

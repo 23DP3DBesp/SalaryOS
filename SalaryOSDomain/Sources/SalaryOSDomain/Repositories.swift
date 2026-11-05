@@ -11,6 +11,8 @@ public enum RepositoryError: Error, Equatable {
     case archivedCategory(UUID)
     case invalidRefundReference(UUID)
     case refundExceedsOriginal(UUID)
+    case invalidReversal(UUID)
+    case alreadyReversed(UUID)
 }
 
 @MainActor
@@ -30,6 +32,8 @@ public protocol CategoryRepository: AnyObject {
 @MainActor
 public protocol LedgerRepository: AnyObject {
     func post(_ posting: LedgerPosting) throws
+    func reverse(postingID: UUID, description: String, occurredAt: Date) throws -> LedgerPosting
+    func correct(postingID: UUID, reversingDescription: String, replacingWith posting: LedgerPosting) throws
     func posting(id: UUID) throws -> LedgerPosting?
     func postings(from start: Date?, through end: Date?) throws -> [LedgerPosting]
     func balance(for account: Account) throws -> Money

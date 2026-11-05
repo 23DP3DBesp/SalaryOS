@@ -6,19 +6,22 @@
 
 ## Phase 1 — Foundation
 
-**Complete:** added shared SwiftUI source, iOS and macOS app targets, SwiftData composition root, adaptive initial navigation, native light/dark system appearance, Latvian/English/Russian string catalog, and a localized storage initialization error screen. Both targets build with Xcode 27.0.
+**Complete:** added shared SwiftUI source, iOS and macOS app targets, SwiftData composition root, adaptive navigation, native system appearance, Latvian/English/Russian string catalog, and a localized storage initialization error screen. Both targets build with Xcode 27.0.
 
 ## Phase 2 — Financial core
 
-**Complete:** added ISO currency and Decimal money types; validated accounts/categories; immutable balanced ledger postings and factories for income, expense, transfer, and refund; SwiftData repositories with duplicate/reference/archive checks; atomic posting storage; signed account balance calculation; and domain plus in-memory persistence tests. See [DATABASE.md](DATABASE.md) for exact rules and limitations.
+**Complete:** added ISO currency and Decimal money types; validated accounts/categories; balanced ledger postings; income, expense, transfer, refund, reversal, and correction operations; SwiftData repositories with duplicate/reference/archive checks; atomic posting storage; signed account balances; and domain/persistence tests. See [DATABASE.md](DATABASE.md) for rules and limits.
 
 ## Phase 3 — Main finance experience
 
-Next: add account and transaction workflows using the repositories, then derive dashboard metrics from persisted data. Add localized forms, validation, search/filter behavior, and accessible empty states.
+**Complete:** added account creation, editing, archival and search; transaction creation, detail, search, type filters, duplication, reversal and correction; custom income/expense categories; iPhone tabs and a macOS sidebar; a configurable dashboard with reorderable/hideable widgets, six-month per-currency charts, balances, monthly cash flow and recent transactions. All displayed financial figures come from persisted data and localize in Latvian, English and Russian.
+
+## Phase 4 — Salary and Latvian tax engine
+
+Next: verify official Latvian rules, add versioned tax configurations and calculation tests, then implement salary profiles and calculation scenarios.
 
 ## Later phases
 
-- Phase 4: verified, versioned Latvian salary tax engine.
 - Phase 5: debts, loans, budgets, and savings.
 - Phase 6: work time, recurring operations, calendar, and notifications.
 - Phase 7: backup, import/export, and CloudKit sync.

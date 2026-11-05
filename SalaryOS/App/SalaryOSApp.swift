@@ -17,7 +17,7 @@ struct SalaryOSApp: App {
         WindowGroup {
             switch startupResult {
             case .success(let appContainer):
-                AppRouter()
+                AppRouter(repository: appContainer.financeRepository)
                     .modelContainer(appContainer.modelContainer)
             case .failure(let error):
                 StorageFailureView(message: error.localizedDescription)

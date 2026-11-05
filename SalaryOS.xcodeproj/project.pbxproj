@@ -23,6 +23,14 @@
 		100000000000000000000012 /* SalaryOSDomain in Frameworks */ = {isa = PBXBuildFile; productRef = B00000000000000000000001; };
 		100000000000000000000013 /* SalaryOSPersistence in Frameworks */ = {isa = PBXBuildFile; productRef = B00000000000000000000002; };
 		100000000000000000000014 /* SalaryOSPersistence in Frameworks */ = {isa = PBXBuildFile; productRef = B00000000000000000000002; };
+		100000000000000000000015 /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000A; };
+		100000000000000000000016 /* TransactionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000B; };
+		100000000000000000000017 /* TransactionEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000C; };
+		100000000000000000000018 /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000A; };
+		100000000000000000000019 /* TransactionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000B; };
+		10000000000000000000001A /* TransactionEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000C; };
+		10000000000000000000001B /* SalaryOSApplication in Frameworks */ = {isa = PBXBuildFile; productRef = B00000000000000000000003; };
+		10000000000000000000001C /* SalaryOSApplication in Frameworks */ = {isa = PBXBuildFile; productRef = B00000000000000000000003; };
 /* End PBXBuildFile section */
 /* Begin PBXFileReference section */
 		200000000000000000000001 /* SalaryOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SalaryOSApp.swift; sourceTree = "<group>"; };
@@ -34,24 +42,29 @@
 		200000000000000000000007 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		200000000000000000000008 /* SalaryOS-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SalaryOS-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		200000000000000000000009 /* SalaryOS-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SalaryOS-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		20000000000000000000000A /* AccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsView.swift; sourceTree = "<group>"; };
+		20000000000000000000000B /* TransactionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionsView.swift; sourceTree = "<group>"; };
+		20000000000000000000000C /* TransactionEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionEditorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 /* Begin PBXFrameworksBuildPhase section */
-		300000000000000000000001 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000011, 100000000000000000000013,); runOnlyForDeploymentPostprocessing = 0; };
-		300000000000000000000002 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000012, 100000000000000000000014,); runOnlyForDeploymentPostprocessing = 0; };
+		300000000000000000000001 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000011, 100000000000000000000013, 10000000000000000000001B,); runOnlyForDeploymentPostprocessing = 0; };
+		300000000000000000000002 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000012, 100000000000000000000014, 10000000000000000000001C,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 /* Begin PBXGroup section */
 		400000000000000000000001 = {isa = PBXGroup; children = (400000000000000000000002, 400000000000000000000003,); sourceTree = "<group>"; };
-		400000000000000000000002 /* SalaryOS */ = {isa = PBXGroup; children = (400000000000000000000004, 400000000000000000000005, 400000000000000000000006, 400000000000000000000007, 400000000000000000000008,); path = SalaryOS; sourceTree = "<group>"; };
+		400000000000000000000002 /* SalaryOS */ = {isa = PBXGroup; children = (400000000000000000000004, 400000000000000000000005, 400000000000000000000006, 400000000000000000000007, 400000000000000000000008, 400000000000000000000009, 40000000000000000000000A,); path = SalaryOS; sourceTree = "<group>"; };
 		400000000000000000000003 /* Products */ = {isa = PBXGroup; children = (200000000000000000000008, 200000000000000000000009,); name = Products; sourceTree = "<group>"; };
 		400000000000000000000004 /* App */ = {isa = PBXGroup; children = (200000000000000000000001, 200000000000000000000002, 200000000000000000000003,); path = App; sourceTree = "<group>"; };
 		400000000000000000000005 /* Navigation */ = {isa = PBXGroup; children = (200000000000000000000004,); path = Features/Navigation; sourceTree = "<group>"; };
 		400000000000000000000006 /* Dashboard */ = {isa = PBXGroup; children = (200000000000000000000005,); path = Features/Dashboard; sourceTree = "<group>"; };
 		400000000000000000000007 /* DesignSystem */ = {isa = PBXGroup; children = (200000000000000000000006,); path = Core/DesignSystem; sourceTree = "<group>"; };
 		400000000000000000000008 /* Resources */ = {isa = PBXGroup; children = (200000000000000000000007,); path = Resources; sourceTree = "<group>"; };
+		400000000000000000000009 /* Accounts */ = {isa = PBXGroup; children = (20000000000000000000000A,); path = Features/Accounts; sourceTree = "<group>"; };
+		40000000000000000000000A /* Transactions */ = {isa = PBXGroup; children = (20000000000000000000000B, 20000000000000000000000C,); path = Features/Transactions; sourceTree = "<group>"; };
 /* End PBXGroup section */
 /* Begin PBXNativeTarget section */
-		500000000000000000000001 /* SalaryOS-iOS */ = {isa = PBXNativeTarget; buildConfigurationList = 700000000000000000000001; buildPhases = (600000000000000000000001, 300000000000000000000001, 600000000000000000000002,); packageProductDependencies = (B00000000000000000000001, B00000000000000000000002,); buildRules = (); dependencies = (); name = "SalaryOS-iOS"; productName = "SalaryOS-iOS"; productReference = 200000000000000000000008; productType = "com.apple.product-type.application"; };
-		500000000000000000000002 /* SalaryOS-macOS */ = {isa = PBXNativeTarget; buildConfigurationList = 700000000000000000000002; buildPhases = (600000000000000000000003, 300000000000000000000002, 600000000000000000000004,); packageProductDependencies = (B00000000000000000000001, B00000000000000000000002,); buildRules = (); dependencies = (); name = "SalaryOS-macOS"; productName = "SalaryOS-macOS"; productReference = 200000000000000000000009; productType = "com.apple.product-type.application"; };
+		500000000000000000000001 /* SalaryOS-iOS */ = {isa = PBXNativeTarget; buildConfigurationList = 700000000000000000000001; buildPhases = (600000000000000000000001, 300000000000000000000001, 600000000000000000000002,); packageProductDependencies = (B00000000000000000000001, B00000000000000000000002, B00000000000000000000003,); buildRules = (); dependencies = (); name = "SalaryOS-iOS"; productName = "SalaryOS-iOS"; productReference = 200000000000000000000008; productType = "com.apple.product-type.application"; };
+		500000000000000000000002 /* SalaryOS-macOS */ = {isa = PBXNativeTarget; buildConfigurationList = 700000000000000000000002; buildPhases = (600000000000000000000003, 300000000000000000000002, 600000000000000000000004,); packageProductDependencies = (B00000000000000000000001, B00000000000000000000002, B00000000000000000000003,); buildRules = (); dependencies = (); name = "SalaryOS-macOS"; productName = "SalaryOS-macOS"; productReference = 200000000000000000000009; productType = "com.apple.product-type.application"; };
 /* End PBXNativeTarget section */
 /* Begin PBXProject section */
 		800000000000000000000001 /* Project object */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2700; LastUpgradeCheck = 2700; TargetAttributes = {500000000000000000000001 = {CreatedOnToolsVersion = 27.0; }; 500000000000000000000002 = {CreatedOnToolsVersion = 27.0; }; }; }; buildConfigurationList = 700000000000000000000003; compatibilityVersion = "Xcode 15.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, lv, ru, Base,); mainGroup = 400000000000000000000001; productRefGroup = 400000000000000000000003; projectDirPath = ""; projectRoot = ""; targets = (500000000000000000000001, 500000000000000000000002,); packageReferences = (C00000000000000000000001,); };
@@ -61,12 +74,13 @@
 		600000000000000000000004 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (10000000000000000000000E,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 /* Begin PBXSourcesBuildPhase section */
-		600000000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000001, 100000000000000000000002, 100000000000000000000003, 100000000000000000000004, 100000000000000000000005, 100000000000000000000006,); runOnlyForDeploymentPostprocessing = 0; };
-		600000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000008, 100000000000000000000009, 10000000000000000000000A, 10000000000000000000000B, 10000000000000000000000C, 10000000000000000000000D,); runOnlyForDeploymentPostprocessing = 0; };
+		600000000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000001, 100000000000000000000002, 100000000000000000000003, 100000000000000000000004, 100000000000000000000005, 100000000000000000000006, 100000000000000000000015, 100000000000000000000016, 100000000000000000000017,); runOnlyForDeploymentPostprocessing = 0; };
+		600000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000008, 100000000000000000000009, 10000000000000000000000A, 10000000000000000000000B, 10000000000000000000000C, 10000000000000000000000D, 100000000000000000000018, 100000000000000000000019, 10000000000000000000001A,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 /* Begin XCBuildConfiguration section */
 		B00000000000000000000001 /* SalaryOSDomain */ = {isa = XCSwiftPackageProductDependency; package = C00000000000000000000001; productName = SalaryOSDomain; };
 		B00000000000000000000002 /* SalaryOSPersistence */ = {isa = XCSwiftPackageProductDependency; package = C00000000000000000000001; productName = SalaryOSPersistence; };
+		B00000000000000000000003 /* SalaryOSApplication */ = {isa = XCSwiftPackageProductDependency; package = C00000000000000000000001; productName = SalaryOSApplication; };
 		C00000000000000000000001 /* XCLocalSwiftPackageReference "SalaryOSDomain" */ = {isa = XCLocalSwiftPackageReference; relativePath = SalaryOSDomain; };
 		900000000000000000000001 = {isa = XCBuildConfiguration; buildSettings = {SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.qwelskw.salaryos.ios; PRODUCT_NAME = "SalaryOS-iOS"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; TARGETED_DEVICE_FAMILY = "1,2"; INFOPLIST_KEY_CFBundleDisplayName = SalaryOS; GENERATE_INFOPLIST_FILE = YES; SWIFT_VERSION = 6.0; SWIFT_STRICT_CONCURRENCY = complete; ALWAYS_SEARCH_USER_PATHS = NO; }; name = Debug; };
 		900000000000000000000002 = {isa = XCBuildConfiguration; buildSettings = {SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.qwelskw.salaryos.ios; PRODUCT_NAME = "SalaryOS-iOS"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; TARGETED_DEVICE_FAMILY = "1,2"; INFOPLIST_KEY_CFBundleDisplayName = SalaryOS; GENERATE_INFOPLIST_FILE = YES; SWIFT_VERSION = 6.0; SWIFT_STRICT_CONCURRENCY = complete; ALWAYS_SEARCH_USER_PATHS = NO; }; name = Release; };

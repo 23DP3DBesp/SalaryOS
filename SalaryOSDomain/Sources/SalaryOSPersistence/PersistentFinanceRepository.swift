@@ -125,6 +125,7 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
 
     func save(_ account: Account) throws {
         let records = try context.fetch(FetchDescriptor<PersistedAccount>())
+        try ensureUniqueIDs(records)
         if let existing = records.first(where: { $0.id == account.id }) {
             guard existing.typeRawValue == account.type.rawValue,
                   existing.currencyCode == account.currency.code,
@@ -142,18 +143,20 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
     }
 
     func account(id: UUID) throws -> Account? {
-        try context.fetch(FetchDescriptor<PersistedAccount>())
-            .first(where: { $0.id == id })?.domainValue()
+        let records = try context.fetch(FetchDescriptor<PersistedAccount>())
+        try ensureUniqueIDs(records)
+        return try records.first(where: { $0.id == id })?.domainValue()
     }
 
     func accounts(includeArchived: Bool = false) throws -> [Account] {
-        try context.fetch(FetchDescriptor<PersistedAccount>())
-            .filter { includeArchived || !$0.isArchived }
-            .map { try $0.domainValue() }
+        let records = try context.fetch(FetchDescriptor<PersistedAccount>())
+        try ensureUniqueIDs(records)
+        return try records.filter { includeArchived || !$0.isArchived }.map { try $0.domainValue() }
     }
 
     func save(_ category: SalaryOSDomain.Category) throws {
         let records = try context.fetch(FetchDescriptor<PersistedCategory>())
+        try ensureUniqueIDs(records)
         var ancestorID = category.parentID
         var visitedAncestors = Set<UUID>()
         while let currentID = ancestorID {
@@ -179,21 +182,23 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
     }
 
     func category(id: UUID) throws -> SalaryOSDomain.Category? {
-        try context.fetch(FetchDescriptor<PersistedCategory>())
-            .first(where: { $0.id == id })?.domainValue()
+        let records = try context.fetch(FetchDescriptor<PersistedCategory>())
+        try ensureUniqueIDs(records)
+        return try records.first(where: { $0.id == id })?.domainValue()
     }
 
     func categories(kind: CategoryKind? = nil, includeArchived: Bool = false) throws -> [SalaryOSDomain.Category] {
-        try context.fetch(FetchDescriptor<PersistedCategory>())
-            .filter { record in
-                (includeArchived || !record.isArchived)
-                    && (kind == nil || record.kindRawValue == kind?.rawValue)
-            }
-            .map { try $0.domainValue() }
+        let records = try context.fetch(FetchDescriptor<PersistedCategory>())
+        try ensureUniqueIDs(records)
+        return try records.filter { record in
+            (includeArchived || !record.isArchived)
+                && (kind == nil || record.kindRawValue == kind?.rawValue)
+        }.map { try $0.domainValue() }
     }
 
     func post(_ posting: LedgerPosting) throws {
         let existing = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        try ensureUniqueIDs(existing)
         guard !existing.contains(where: { $0.id == posting.id }) else {
             throw RepositoryError.duplicateIdentifier(posting.id)
         }
@@ -203,14 +208,51 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         try commit()
     }
 
+    func reverse(postingID: UUID, description: String, occurredAt: Date) throws -> LedgerPosting {
+        let records = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        try ensureUniqueIDs(records)
+        guard let record = records.first(where: { $0.id == postingID }) else {
+            throw RepositoryError.invalidReversal(postingID)
+        }
+        let original = try record.domainValue()
+        let reversal = try LedgerFactory.reversal(of: original, description: description, occurredAt: occurredAt)
+        try validateReferences(in: reversal)
+        context.insert(PersistedLedgerPosting(reversal, entriesData: try encoder.encode(reversal.entries)))
+        try commit()
+        return reversal
+    }
+
+    func correct(postingID: UUID, reversingDescription: String, replacingWith posting: LedgerPosting) throws {
+        let records = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        try ensureUniqueIDs(records)
+        guard let record = records.first(where: { $0.id == postingID }), posting.id != postingID else {
+            throw RepositoryError.invalidReversal(postingID)
+        }
+        guard !records.contains(where: { $0.id == posting.id }) else {
+            throw RepositoryError.duplicateIdentifier(posting.id)
+        }
+        guard posting.kind == .income || posting.kind == .expense || posting.kind == .transfer else {
+            throw RepositoryError.invalidReversal(postingID)
+        }
+        let original = try record.domainValue()
+        let reversal = try LedgerFactory.reversal(of: original, description: reversingDescription)
+        try validateReferences(in: reversal)
+        try validateReferences(in: posting)
+        context.insert(PersistedLedgerPosting(reversal, entriesData: try encoder.encode(reversal.entries)))
+        context.insert(PersistedLedgerPosting(posting, entriesData: try encoder.encode(posting.entries)))
+        try commit()
+    }
+
     func posting(id: UUID) throws -> LedgerPosting? {
-        try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
-            .first(where: { $0.id == id })?.domainValue()
+        let records = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        try ensureUniqueIDs(records)
+        return try records.first(where: { $0.id == id })?.domainValue()
     }
 
     func postings(from start: Date? = nil, through end: Date? = nil) throws -> [LedgerPosting] {
-        try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
-            .filter { record in
+        let records = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        try ensureUniqueIDs(records)
+        return try records.filter { record in
                 if let start, record.occurredAt < start { return false }
                 if let end, record.occurredAt > end { return false }
                 return true
@@ -233,6 +275,14 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         return try Money(amount, currency: account.currency)
     }
 
+
+    private func ensureUniqueIDs<Record: Identifiable>(_ records: [Record]) throws where Record.ID == UUID {
+        var identifiers = Set<UUID>()
+        for record in records where !identifiers.insert(record.id).inserted {
+            throw RepositoryError.duplicateIdentifier(record.id)
+        }
+    }
+
     private func commit() throws {
         do {
             try context.save()
@@ -245,6 +295,8 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
     private func validateReferences(in posting: LedgerPosting) throws {
         let accounts = try context.fetch(FetchDescriptor<PersistedAccount>())
         let categories = try context.fetch(FetchDescriptor<PersistedCategory>())
+        try ensureUniqueIDs(accounts)
+        try ensureUniqueIDs(categories)
         for entry in posting.entries {
             switch entry.accountKind {
             case .asset, .liability:
@@ -267,9 +319,36 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
                 guard !category.isArchived else { throw RepositoryError.archivedCategory(category.id) }
             }
         }
+        let storedPostings = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
         if posting.kind == .refund {
-            try validateRefund(posting, storedPostings: context.fetch(FetchDescriptor<PersistedLedgerPosting>()))
+            try validateRefund(posting, storedPostings: storedPostings)
+        } else if posting.kind == .reversal {
+            try validateReversal(posting, storedPostings: storedPostings)
         }
+    }
+
+    private func validateReversal(_ reversal: LedgerPosting, storedPostings: [PersistedLedgerPosting]) throws {
+        guard let originalID = reversal.relatedPostingID,
+              let storedOriginal = storedPostings.first(where: { $0.id == originalID }),
+              let original = try? storedOriginal.domainValue(),
+              original.kind != .refund, original.kind != .reversal
+        else { throw RepositoryError.invalidReversal(reversal.relatedPostingID ?? reversal.id) }
+        guard !storedPostings.contains(where: { $0.relatedPostingID == originalID && $0.kindRawValue == TransactionKind.reversal.rawValue }) else {
+            throw RepositoryError.alreadyReversed(originalID)
+        }
+        if original.kind == .expense,
+           storedPostings.contains(where: { $0.relatedPostingID == originalID && $0.kindRawValue == TransactionKind.refund.rawValue }) {
+            throw RepositoryError.invalidReversal(originalID)
+        }
+        let expectedEntries = try original.entries.map { entry in
+            try LedgerEntry(
+                accountID: entry.accountID,
+                accountKind: entry.accountKind,
+                side: entry.side == .debit ? .credit : .debit,
+                money: entry.money
+            )
+        }
+        guard reversal.entries == expectedEntries else { throw RepositoryError.invalidReversal(originalID) }
     }
 
     private func validateRefund(_ refund: LedgerPosting, storedPostings: [PersistedLedgerPosting]) throws {
