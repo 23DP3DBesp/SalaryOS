@@ -82,6 +82,7 @@ final class PersistedLedgerPosting {
     var notes: String?
     var relatedPostingID: UUID?
     var scheduledOccurrenceID: String?
+    var debtPaymentID: UUID?
     var entriesData: Data
     var createdAt: Date
 
@@ -93,6 +94,7 @@ final class PersistedLedgerPosting {
         notes = posting.notes
         relatedPostingID = posting.relatedPostingID
         scheduledOccurrenceID = posting.scheduledOccurrenceID
+        debtPaymentID = posting.debtPaymentID
         self.entriesData = entriesData
         createdAt = posting.createdAt
     }
@@ -105,7 +107,8 @@ final class PersistedLedgerPosting {
         return try LedgerPosting(
             id: id, kind: kind, occurredAt: occurredAt, description: descriptionText,
             notes: notes, relatedPostingID: relatedPostingID,
-            scheduledOccurrenceID: scheduledOccurrenceID, entries: entries, createdAt: createdAt
+            scheduledOccurrenceID: scheduledOccurrenceID, debtPaymentID: debtPaymentID,
+            entries: entries, createdAt: createdAt
         )
     }
 }
@@ -567,6 +570,20 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         guard !existing.contains(where: { $0.id == posting.id }) else {
             throw RepositoryError.duplicateIdentifier(posting.id)
         }
+        if let paymentID = posting.debtPaymentID {
+            let payments = try context.fetch(FetchDescriptor<PersistedDebtPayment>())
+            guard let storedPayment = payments.first(where: { $0.id == paymentID }) else {
+                throw RepositoryError.debtPaymentNotFound(paymentID)
+            }
+            let payment = try storedPayment.domainValue()
+            guard posting.kind == .transfer, posting.occurredAt == payment.paidAt,
+                  posting.entries.contains(where: { $0.accountID == payment.debtID && $0.money == payment.amount }) else {
+                throw RepositoryError.invalidLedgerReference(payment.debtID)
+            }
+            guard !existing.contains(where: { $0.debtPaymentID == paymentID }) else {
+                throw RepositoryError.duplicateIdentifier(paymentID)
+            }
+        }
         try validateReferences(in: posting)
         let data = try encoder.encode(posting.entries)
         context.insert(PersistedLedgerPosting(posting, entriesData: data))
@@ -694,7 +711,8 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
     func save(_ debt: Debt) throws {
         let records = try context.fetch(FetchDescriptor<PersistedDebt>())
         try ensureUniqueIDs(records)
-        let existingPayments = try context.fetch(FetchDescriptor<PersistedDebtPayment>()).filter { $0.debtID == debt.id }.map { try $0.domainValue() }
+        let paymentRecords = try context.fetch(FetchDescriptor<PersistedDebtPayment>())
+        let existingPayments = try activeDebtPayments(from: paymentRecords, debtID: debt.id)
         _ = try DebtSummary(debt: debt, payments: existingPayments)
         if let existing = records.first(where: { $0.id == debt.id }) {
             guard existing.directionRawValue == debt.direction.rawValue,
@@ -739,10 +757,42 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
             throw RepositoryError.duplicateIdentifier(payment.id)
         }
         let debt = try debtRecord.domainValue()
-        let priorPayments = try paymentRecords.filter { $0.debtID == debt.id }.map { try $0.domainValue() }
+        let priorPayments = try activeDebtPayments(from: paymentRecords, debtID: debt.id)
         _ = try DebtSummary(debt: debt, payments: priorPayments).recording(payment)
         context.insert(PersistedDebtPayment(payment))
         try commit()
+    }
+
+    func record(_ payment: DebtPayment, using accountID: UUID) throws -> LedgerPosting {
+        let debtRecords = try context.fetch(FetchDescriptor<PersistedDebt>())
+        try ensureUniqueIDs(debtRecords)
+        guard let debtRecord = debtRecords.first(where: { $0.id == payment.debtID }) else {
+            throw RepositoryError.debtNotFound(payment.debtID)
+        }
+        let debt = try debtRecord.domainValue()
+        guard !debt.isArchived else { throw RepositoryError.invalidLedgerReference(debt.id) }
+
+        let paymentRecords = try context.fetch(FetchDescriptor<PersistedDebtPayment>())
+        try ensureUniqueIDs(paymentRecords)
+        guard !paymentRecords.contains(where: { $0.id == payment.id }) else {
+            throw RepositoryError.duplicateIdentifier(payment.id)
+        }
+        let priorPayments = try activeDebtPayments(from: paymentRecords, debtID: debt.id)
+        _ = try DebtSummary(debt: debt, payments: priorPayments).recording(payment)
+
+        guard let account = try account(id: accountID) else { throw RepositoryError.accountNotFound(accountID) }
+        guard !account.isArchived else { throw RepositoryError.archivedAccount(account.id) }
+        let posting = try LedgerFactory.debtPayment(debt: debt, payment: payment, from: account)
+        let storedPostings = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        try ensureUniqueIDs(storedPostings)
+        guard !storedPostings.contains(where: { $0.debtPaymentID == payment.id }) else {
+            throw RepositoryError.duplicateIdentifier(payment.id)
+        }
+        try validateReferences(in: posting)
+        context.insert(PersistedDebtPayment(payment))
+        context.insert(PersistedLedgerPosting(posting, entriesData: try encoder.encode(posting.entries)))
+        try commit()
+        return posting
     }
 
     func payments(for debtID: UUID) throws -> [DebtPayment] {
@@ -753,7 +803,9 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
 
     func summary(for debtID: UUID) throws -> DebtSummary {
         guard let debt = try debt(id: debtID) else { throw RepositoryError.debtNotFound(debtID) }
-        return try DebtSummary(debt: debt, payments: payments(for: debtID))
+        let records = try context.fetch(FetchDescriptor<PersistedDebtPayment>())
+        try ensureUniqueIDs(records)
+        return try DebtSummary(debt: debt, payments: activeDebtPayments(from: records, debtID: debtID))
     }
 
     func save(_ goal: SavingsGoal) throws {
@@ -1050,6 +1102,19 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         }
     }
 
+    private func activeDebtPayments(from paymentRecords: [PersistedDebtPayment], debtID: UUID) throws -> [DebtPayment] {
+        let postings = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        let reversedPostingIDs = Set(postings
+            .filter { $0.kindRawValue == TransactionKind.reversal.rawValue }
+            .compactMap(\.relatedPostingID))
+        let reversedPaymentIDs = Set(postings
+            .filter { reversedPostingIDs.contains($0.id) }
+            .compactMap(\.debtPaymentID))
+        return try paymentRecords
+            .filter { $0.debtID == debtID && !reversedPaymentIDs.contains($0.id) }
+            .map { try $0.domainValue() }
+    }
+
     private func commit() throws {
         do {
             try context.save()
@@ -1067,14 +1132,24 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         for entry in posting.entries {
             switch entry.accountKind {
             case .asset, .liability:
-                guard let record = accounts.first(where: { $0.id == entry.accountID }) else {
-                    throw RepositoryError.accountNotFound(entry.accountID)
+                if let record = accounts.first(where: { $0.id == entry.accountID }) {
+                    let account = try record.domainValue()
+                    guard !account.isArchived else { throw RepositoryError.archivedAccount(account.id) }
+                    guard account.currency == entry.money.currency,
+                          (account.type.isLiability ? LedgerAccountKind.liability : .asset) == entry.accountKind
+                    else { throw RepositoryError.invalidLedgerReference(entry.accountID) }
+                } else {
+                    let debts = try context.fetch(FetchDescriptor<PersistedDebt>())
+                    guard let record = debts.first(where: { $0.id == entry.accountID }) else {
+                        throw RepositoryError.accountNotFound(entry.accountID)
+                    }
+                    let debt = try record.domainValue()
+                    let expectedKind: LedgerAccountKind = debt.direction == .payable ? .liability : .asset
+                    guard !debt.isArchived, debt.principal.currency == entry.money.currency,
+                          expectedKind == entry.accountKind else {
+                        throw RepositoryError.invalidLedgerReference(entry.accountID)
+                    }
                 }
-                let account = try record.domainValue()
-                guard !account.isArchived else { throw RepositoryError.archivedAccount(account.id) }
-                guard account.currency == entry.money.currency,
-                      (account.type.isLiability ? LedgerAccountKind.liability : .asset) == entry.accountKind
-                else { throw RepositoryError.invalidLedgerReference(entry.accountID) }
             case .income, .expense:
                 guard let category = categories.first(where: { $0.id == entry.accountID }) else {
                     throw RepositoryError.categoryNotFound(entry.accountID)

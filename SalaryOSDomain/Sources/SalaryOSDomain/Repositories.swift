@@ -63,6 +63,7 @@ public protocol DebtRepository: AnyObject {
     func debt(id: UUID) throws -> Debt?
     func debts(includeArchived: Bool) throws -> [Debt]
     func record(_ payment: DebtPayment) throws
+    func record(_ payment: DebtPayment, using accountID: UUID) throws -> LedgerPosting
     func payments(for debtID: UUID) throws -> [DebtPayment]
     func summary(for debtID: UUID) throws -> DebtSummary
 }

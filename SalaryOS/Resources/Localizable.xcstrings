@@ -4529,6 +4529,13 @@
         }
       }
     },
+    "debt.payment-account": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Account" } },
+        "lv": { "stringUnit": { "state": "translated", "value": "Konts" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Счёт" } }
+      }
+    },
     "debt.payment-note": {
       "localizations": {
         "en": {

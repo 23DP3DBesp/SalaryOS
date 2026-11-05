@@ -22,6 +22,8 @@ Each posting and its entries are stored in one SwiftData record and saved togeth
 
 Money uses `Decimal`, rounds at the ISO currency's minor-unit precision, and rejects arithmetic across different currencies. Account balances use a signed owner-perspective convention: assets have positive balances, liabilities have negative balances. Opening balance, account type, and currency are immutable for an account ID; corrections to opening state must use an auditable ledger operation rather than editing the baseline.
 
+Recording a debt repayment from the app requires selecting an asset account. The repository stores the payment and a linked balanced transfer atomically: payable debts debit the debt liability and credit cash; receivable debts debit cash and credit the receivable asset. These transfers do not count as income or spending. Reversing a linked transfer restores both the account balance and debt outstanding; the original payment remains in its audit history.
+
 A debit increases the signed balance; a credit decreases it. That gives expected results for both assets (income debits, expenses/transfer-out credits) and liabilities (charges credit into a more negative balance; repayments debit toward zero).
 
 ## Ledger rules

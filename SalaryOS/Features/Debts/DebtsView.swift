@@ -6,7 +6,7 @@ struct DebtsView: View {
     @State private var summaries: [DebtSummary] = []
     @State private var isEditorPresented = false
     @State private var selectedDebt: Debt?
-    @State private var paymentDebt: Debt?
+    @State private var paymentDebt: DebtSummary?
     @State private var errorMessage: String?
 
     var body: some View {
@@ -44,7 +44,7 @@ struct DebtsView: View {
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                             if summary.status == .open {
-                                Button("debt.record-payment", systemImage: "plus.circle") { paymentDebt = summary.debt }
+                                Button("debt.record-payment", systemImage: "plus.circle") { paymentDebt = summary }
                                     .font(.subheadline)
                             } else {
                                 Label("debt.settled", systemImage: "checkmark.circle")
@@ -77,8 +77,8 @@ struct DebtsView: View {
         .sheet(isPresented: $isEditorPresented, onDismiss: reload) {
             DebtEditorView(repository: repository, existingDebt: selectedDebt)
         }
-        .sheet(item: $paymentDebt, onDismiss: reload) { debt in
-            DebtPaymentEditor(repository: repository, debt: debt)
+        .sheet(item: $paymentDebt, onDismiss: reload) { summary in
+            DebtPaymentEditor(repository: repository, summary: summary)
         }
         .task { reload() }
         .alert("common.error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
@@ -183,38 +183,62 @@ private struct DebtEditorView: View {
 
 private struct DebtPaymentEditor: View {
     let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository
-    let debt: Debt
+    let summary: DebtSummary
     @Environment(\.dismiss) private var dismiss
     @State private var amount = ""
     @State private var note = ""
+    @State private var accounts: [Account] = []
+    @State private var accountID: UUID?
     @State private var errorMessage: String?
+
+    private var debt: Debt { summary.debt }
+    private var compatibleAccounts: [Account] {
+        accounts.filter { !$0.type.isLiability && $0.currency == debt.principal.currency }
+    }
 
     var body: some View {
         NavigationStack {
             Form {
-                LabeledContent("debt.outstanding", value: debt.principal.amount.formatted(.currency(code: debt.principal.currency.code)))
+                LabeledContent("debt.outstanding", value: summary.outstanding.amount.formatted(.currency(code: debt.principal.currency.code)))
                 TextField("debt.payment-amount", text: $amount)
 #if os(iOS)
                     .keyboardType(.decimalPad)
 #endif
+                Picker("debt.payment-account", selection: $accountID) {
+                    Text("transactions.field.choose-account").tag(UUID?.none)
+                    ForEach(compatibleAccounts) { account in Text(account.name).tag(Optional(account.id)) }
+                }
                 TextField("debt.payment-note", text: $note)
             }
             .navigationTitle("debt.record-payment")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("common.cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("common.save", action: save).disabled(Decimal(string: amount) == nil) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("common.save", action: save)
+                        .disabled(Decimal(string: amount).map { $0 > .zero && $0 <= summary.outstanding.amount } != true || accountID == nil)
+                }
             }
+            .task { loadAccounts() }
             .alert("common.error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
                 Button("common.ok", role: .cancel) { errorMessage = nil }
             } message: { Text(errorMessage ?? "") }
         }
-        .frame(minWidth: 340, minHeight: 260)
+        .frame(minWidth: 360, minHeight: 320)
+    }
+
+    private func loadAccounts() {
+        do {
+            accounts = try repository.accounts(includeArchived: false)
+            accountID = compatibleAccounts.first?.id
+        } catch { errorMessage = error.localizedDescription }
     }
 
     private func save() {
         do {
             guard let decimal = Decimal(string: amount.replacingOccurrences(of: ",", with: ".")) else { throw DebtError.nonPositivePayment }
-            try repository.record(DebtPayment(debtID: debt.id, amount: Money(decimal, currency: debt.principal.currency), note: note))
+            guard let accountID else { return }
+            let payment = try DebtPayment(debtID: debt.id, amount: Money(decimal, currency: debt.principal.currency), note: note)
+            _ = try repository.record(payment, using: accountID)
             dismiss()
         } catch { errorMessage = error.localizedDescription }
     }

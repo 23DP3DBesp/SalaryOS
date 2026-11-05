@@ -5,6 +5,50 @@ import SalaryOSPersistence
 
 final class PersistentFinanceRepositoryTests: XCTestCase {
     @MainActor
+    func testDebtPaymentUpdatesAccountLedgerAndReversalRestoresOutstanding() throws {
+        let stack = try FinancePersistenceStack(inMemory: true)
+        let repository = stack.repository
+        let eur = try Currency(code: "EUR")
+        let opening = try Money(Decimal(1_000), currency: eur)
+        let account = try Account(name: "Bank", type: .current, currency: eur, openingBalance: opening)
+        let debt = try Debt(name: "Laptop loan", counterparty: "Alex", direction: .payable, principal: opening)
+        try repository.save(account)
+        try repository.save(debt)
+
+        let payment = try DebtPayment(debtID: debt.id, amount: Money(Decimal(250), currency: eur))
+        let posting = try repository.record(payment, using: account.id)
+        XCTAssertEqual(posting.kind, .transfer)
+        XCTAssertEqual(posting.debtPaymentID, payment.id)
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(750))
+        XCTAssertEqual(try repository.summary(for: debt.id).outstanding.amount, Decimal(750))
+        XCTAssertThrowsError(try repository.record(payment, using: account.id))
+        XCTAssertEqual(try repository.postings(from: nil, through: nil).count, 1)
+
+        _ = try repository.reverse(postingID: posting.id, description: "Undo debt payment", occurredAt: .now)
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(1_000))
+        XCTAssertEqual(try repository.summary(for: debt.id).outstanding.amount, Decimal(1_000))
+        XCTAssertTrue(try repository.summary(for: debt.id).payments.isEmpty)
+    }
+
+    @MainActor
+    func testReceivableRepaymentMovesFundsIntoSelectedAccount() throws {
+        let stack = try FinancePersistenceStack(inMemory: true)
+        let repository = stack.repository
+        let eur = try Currency(code: "EUR")
+        let account = try Account(name: "Bank", type: .current, currency: eur)
+        let principal = try Money(Decimal(500), currency: eur)
+        let debt = try Debt(name: "Loan to Sam", counterparty: "Sam", direction: .receivable, principal: principal)
+        try repository.save(account)
+        try repository.save(debt)
+
+        let payment = try DebtPayment(debtID: debt.id, amount: Money(Decimal(150), currency: eur))
+        let posting = try repository.record(payment, using: account.id)
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(150))
+        XCTAssertEqual(try repository.summary(for: debt.id).outstanding.amount, Decimal(350))
+        XCTAssertEqual(posting.entries.first(where: { $0.accountID == debt.id })?.side, .credit)
+    }
+
+    @MainActor
     func testScheduledMonthlyOccurrencesKeepAnchorAndPostingIsIdempotent() throws {
         let stack = try FinancePersistenceStack(inMemory: true)
         let repository = stack.repository

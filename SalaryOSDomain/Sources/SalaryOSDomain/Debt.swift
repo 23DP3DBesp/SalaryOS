@@ -91,12 +91,13 @@ public struct DebtPayment: Identifiable, Hashable, Codable, Sendable {
     }
 }
 
-public struct DebtSummary: Equatable, Sendable {
+public struct DebtSummary: Equatable, Identifiable, Sendable {
     public let debt: Debt
     public let payments: [DebtPayment]
     public let paid: Money
     public let outstanding: Money
     public let status: DebtStatus
+    public var id: UUID { debt.id }
 
     public init(debt: Debt, payments: [DebtPayment]) throws {
         var total = Decimal.zero
