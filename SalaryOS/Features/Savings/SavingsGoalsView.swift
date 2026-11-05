@@ -7,7 +7,7 @@ struct SavingsGoalsView: View {
     @State private var accounts: [Account] = []
     @State private var editorGoal: SavingsGoal?
     @State private var isEditorPresented = false
-    @State private var contributionGoal: SavingsGoal?
+    @State private var contributionGoal: SavingsGoalProgress?
     @State private var errorMessage: String?
 
     var body: some View {
@@ -45,7 +45,7 @@ struct SavingsGoalsView: View {
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                             if item.status == .active {
-                                Button("savings.add-contribution", systemImage: "plus.circle") { contributionGoal = item.goal }
+                                Button("savings.add-contribution", systemImage: "plus.circle") { contributionGoal = item }
                                     .font(.subheadline)
                             } else {
                                 Label("savings.reached", systemImage: "checkmark.circle").foregroundStyle(.green)
@@ -77,8 +77,8 @@ struct SavingsGoalsView: View {
         .sheet(isPresented: $isEditorPresented, onDismiss: reload) {
             SavingsGoalEditor(repository: repository, existingGoal: editorGoal)
         }
-        .sheet(item: $contributionGoal, onDismiss: reload) { goal in
-            SavingsContributionEditor(repository: repository, goal: goal)
+        .sheet(item: $contributionGoal, onDismiss: reload) { progress in
+            SavingsContributionEditor(repository: repository, progress: progress)
         }
         .task { reload() }
         .alert("common.error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
@@ -188,39 +188,61 @@ private struct SavingsGoalEditor: View {
 
 private struct SavingsContributionEditor: View {
     let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository
-    let goal: SavingsGoal
+    let progress: SavingsGoalProgress
     @Environment(\.dismiss) private var dismiss
     @State private var amount = ""
     @State private var note = ""
+    @State private var accounts: [Account] = []
+    @State private var accountID: UUID?
     @State private var errorMessage: String?
+
+    private var goal: SavingsGoal { progress.goal }
+    private var compatibleAccounts: [Account] {
+        accounts.filter { !$0.type.isLiability && $0.currency == goal.currency && $0.id != goal.linkedAccountID }
+    }
 
     var body: some View {
         NavigationStack {
             Form {
-                LabeledContent("savings.remaining", value: goal.target.amount.formatted(.currency(code: goal.currency.code)))
+                LabeledContent("savings.remaining", value: progress.remaining.amount.formatted(.currency(code: goal.currency.code)))
                 TextField("savings.contribution-amount", text: $amount)
 #if os(iOS)
                     .keyboardType(.decimalPad)
 #endif
+                Picker("savings.contribution-account", selection: $accountID) {
+                    Text("transactions.field.choose-account").tag(UUID?.none)
+                    ForEach(compatibleAccounts) { account in Text(account.name).tag(Optional(account.id)) }
+                }
                 TextField("savings.contribution-note", text: $note)
             }
             .navigationTitle("savings.add-contribution")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("common.cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("common.save", action: save).disabled(Decimal(string: amount) == nil) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("common.save", action: save).disabled(Decimal(string: amount) == nil || accountID == nil)
+                }
             }
+            .task { loadAccounts() }
             .alert("common.error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
                 Button("common.ok", role: .cancel) { errorMessage = nil }
             } message: { Text(errorMessage ?? "") }
         }
-        .frame(minWidth: 340, minHeight: 260)
+        .frame(minWidth: 360, minHeight: 320)
+    }
+
+    private func loadAccounts() {
+        do {
+            accounts = try repository.accounts(includeArchived: false)
+            accountID = compatibleAccounts.first?.id
+        } catch { errorMessage = error.localizedDescription }
     }
 
     private func save() {
         do {
             guard let decimal = Decimal(string: amount.replacingOccurrences(of: ",", with: ".")) else { throw SavingsGoalError.nonPositiveContribution }
+            guard let accountID else { return }
             let contribution = try SavingsContribution(goalID: goal.id, amount: Money(decimal, currency: goal.currency), note: note)
-            try repository.record(contribution)
+            _ = try repository.record(contribution, from: accountID)
             dismiss()
         } catch { errorMessage = error.localizedDescription }
     }

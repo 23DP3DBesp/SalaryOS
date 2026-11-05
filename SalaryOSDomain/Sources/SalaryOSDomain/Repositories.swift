@@ -17,7 +17,9 @@ public enum RepositoryError: Error, Equatable {
     case debtNotFound(UUID)
     case debtPaymentNotFound(UUID)
     case savingsGoalNotFound(UUID)
+    case savingsContributionNotFound(UUID)
     case loanNotFound(UUID)
+    case loanPaymentNotFound(UUID)
     case loanTermsConflict(UUID)
     case duplicateLoanRateDate(Date)
     case workEntryNotFound(UUID)
@@ -74,6 +76,7 @@ public protocol SavingsGoalRepository: AnyObject {
     func goal(id: UUID) throws -> SavingsGoal?
     func goals(includeArchived: Bool) throws -> [SavingsGoal]
     func record(_ contribution: SavingsContribution) throws
+    func record(_ contribution: SavingsContribution, from accountID: UUID) throws -> LedgerPosting
     func contributions(for goalID: UUID) throws -> [SavingsContribution]
     func progress(for goalID: UUID, asOf date: Date, calendar: Calendar) throws -> SavingsGoalProgress
 }
@@ -86,6 +89,7 @@ public protocol LoanRepository: AnyObject {
     func record(_ rateChange: LoanRateChange) throws
     func rateChanges(for loanID: UUID) throws -> [LoanRateChange]
     func record(_ payment: LoanExtraPayment) throws
+    func record(_ payment: LoanExtraPayment, from accountID: UUID) throws -> LedgerPosting
     func extraPayments(for loanID: UUID) throws -> [LoanExtraPayment]
     func schedule(for loanID: UUID, calendar: Calendar) throws -> LoanSchedule
 }

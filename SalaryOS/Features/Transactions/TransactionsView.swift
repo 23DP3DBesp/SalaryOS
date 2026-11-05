@@ -6,14 +6,16 @@ import SwiftUI
 @MainActor
 @Observable
 private final class TransactionsViewModel {
-    private let repository: any AccountRepository & CategoryRepository & LedgerRepository & DebtRepository
+    private let repository: any AccountRepository & CategoryRepository & LedgerRepository & DebtRepository & SavingsGoalRepository & LoanRepository
     var postings: [LedgerPosting] = []
     var accounts: [UUID: Account] = [:]
     var categories: [UUID: SalaryOSDomain.Category] = [:]
     var debts: [UUID: Debt] = [:]
+    var savingsGoals: [UUID: SavingsGoal] = [:]
+    var loans: [UUID: Loan] = [:]
     var errorMessage: String?
 
-    init(repository: any AccountRepository & CategoryRepository & LedgerRepository & DebtRepository) {
+    init(repository: any AccountRepository & CategoryRepository & LedgerRepository & DebtRepository & SavingsGoalRepository & LoanRepository) {
         self.repository = repository
     }
 
@@ -23,6 +25,8 @@ private final class TransactionsViewModel {
             accounts = Dictionary(uniqueKeysWithValues: try repository.accounts(includeArchived: true).map { ($0.id, $0) })
             categories = Dictionary(uniqueKeysWithValues: try repository.categories(kind: nil, includeArchived: true).map { ($0.id, $0) })
             debts = Dictionary(uniqueKeysWithValues: try repository.debts(includeArchived: true).map { ($0.id, $0) })
+            savingsGoals = Dictionary(uniqueKeysWithValues: try repository.goals(includeArchived: true).map { ($0.id, $0) })
+            loans = Dictionary(uniqueKeysWithValues: try repository.loans(includeArchived: true).map { ($0.id, $0) })
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -48,13 +52,13 @@ private enum TransactionSheet: Identifiable {
 
 struct TransactionsView: View {
     @State private var model: TransactionsViewModel
-    private let repository: any AccountRepository & CategoryRepository & LedgerRepository & DebtRepository
+    private let repository: any AccountRepository & CategoryRepository & LedgerRepository & DebtRepository & SavingsGoalRepository & LoanRepository
     @State private var searchText = ""
     @State private var kindFilter: TransactionKind?
     @Binding private var isEditorPresented: Bool
     @State private var activeSheet: TransactionSheet?
 
-    init(repository: any AccountRepository & CategoryRepository & LedgerRepository & DebtRepository, isEditorPresented: Binding<Bool> = .constant(false)) {
+    init(repository: any AccountRepository & CategoryRepository & LedgerRepository & DebtRepository & SavingsGoalRepository & LoanRepository, isEditorPresented: Binding<Bool> = .constant(false)) {
         self.repository = repository
         _model = State(initialValue: TransactionsViewModel(repository: repository))
         _isEditorPresented = isEditorPresented
@@ -70,6 +74,8 @@ struct TransactionsView: View {
                         model.accounts[entry.accountID]?.name.localizedCaseInsensitiveContains(searchText) == true
                             || model.categories[entry.accountID]?.name.localizedCaseInsensitiveContains(searchText) == true
                             || model.debts[entry.accountID]?.name.localizedCaseInsensitiveContains(searchText) == true
+                            || model.savingsGoals[entry.accountID]?.name.localizedCaseInsensitiveContains(searchText) == true
+                            || model.loans[entry.accountID]?.name.localizedCaseInsensitiveContains(searchText) == true
                     })
         }
     }
@@ -132,7 +138,8 @@ struct TransactionsView: View {
                 TransactionEditorView(repository: repository)
             case .details(let posting):
                 TransactionDetailView(
-                    posting: posting, accounts: model.accounts, categories: model.categories, debts: model.debts,
+                    posting: posting, accounts: model.accounts, categories: model.categories,
+                    debts: model.debts, savingsGoals: model.savingsGoals, loans: model.loans,
                     repository: repository,
                     onDuplicate: { activeSheet = .duplicate(posting) },
                     onCorrect: { activeSheet = .correct(posting) },
@@ -197,6 +204,8 @@ private struct TransactionDetailView: View {
     let accounts: [UUID: Account]
     let categories: [UUID: SalaryOSDomain.Category]
     let debts: [UUID: Debt]
+    let savingsGoals: [UUID: SavingsGoal]
+    let loans: [UUID: Loan]
     let repository: any AccountRepository & CategoryRepository & LedgerRepository
     let onDuplicate: () -> Void
     let onCorrect: () -> Void
@@ -288,6 +297,8 @@ private struct TransactionDetailView: View {
     private func label(for entry: LedgerEntry) -> String {
         if let account = accounts[entry.accountID] { return account.name }
         if let debt = debts[entry.accountID] { return debt.name }
+        if let goal = savingsGoals[entry.accountID] { return goal.name }
+        if let loan = loans[entry.accountID] { return loan.name }
         if let category = categories[entry.accountID] {
             return category.kind == .salary ? String(localized: "transaction-kind.salary") : category.name
         }

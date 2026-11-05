@@ -87,13 +87,14 @@ public struct SavingsContribution: Identifiable, Hashable, Codable, Sendable {
     }
 }
 
-public struct SavingsGoalProgress: Equatable, Sendable {
+public struct SavingsGoalProgress: Equatable, Identifiable, Sendable {
     public let goal: SavingsGoal
     public let contributions: [SavingsContribution]
     public let saved: Money
     public let remaining: Money
     public let status: SavingsGoalStatus
     public let requiredMonthlyContribution: Money?
+    public var id: UUID { goal.id }
 
     public var progressFraction: Decimal {
         guard goal.target.amount > .zero else { return .zero }

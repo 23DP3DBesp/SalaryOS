@@ -49,6 +49,58 @@ final class PersistentFinanceRepositoryTests: XCTestCase {
     }
 
     @MainActor
+    func testSavingsContributionMovesFundsAndReversalRestoresGoalProgress() throws {
+        let stack = try FinancePersistenceStack(inMemory: true)
+        let repository = stack.repository
+        let eur = try Currency(code: "EUR")
+        let opening = try Money(Decimal(1_000), currency: eur)
+        let account = try Account(name: "Main", type: .current, currency: eur, openingBalance: opening)
+        let goal = try SavingsGoal(name: "Emergency fund", target: Money(Decimal(2_000), currency: eur))
+        try repository.save(account)
+        try repository.save(goal)
+
+        let contribution = try SavingsContribution(goalID: goal.id, amount: Money(Decimal(250), currency: eur))
+        let posting = try repository.record(contribution, from: account.id)
+        XCTAssertEqual(posting.savingsContributionID, contribution.id)
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(750))
+        XCTAssertEqual(try repository.progress(for: goal.id, asOf: .now, calendar: .current).saved.amount, Decimal(250))
+
+        _ = try repository.reverse(postingID: posting.id, description: "Undo savings contribution", occurredAt: .now)
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(1_000))
+        XCTAssertEqual(try repository.progress(for: goal.id, asOf: .now, calendar: .current).saved.amount, .zero)
+    }
+
+    @MainActor
+    func testLoanExtraPaymentPostsToLedgerAndReversalRestoresSchedule() throws {
+        let stack = try FinancePersistenceStack(inMemory: true)
+        let repository = stack.repository
+        let eur = try Currency(code: "EUR")
+        let opening = try Money(Decimal(5_000), currency: eur)
+        let account = try Account(name: "Main", type: .current, currency: eur, openingBalance: opening)
+        let loan = try Loan(
+            name: "Car loan", lender: "Bank", principal: opening, annualInterestRate: 0,
+            rateType: .fixed, durationMonths: 10,
+            startDate: ISO8601DateFormatter().date(from: "2025-01-01T00:00:00Z")!,
+            fees: Money(.zero, currency: eur)
+        )
+        try repository.save(account)
+        try repository.save(loan)
+
+        let payment = try LoanExtraPayment(
+            loanID: loan.id, principalReduction: Money(Decimal(500), currency: eur),
+            paidAt: ISO8601DateFormatter().date(from: "2025-02-10T00:00:00Z")!, loan: loan
+        )
+        let posting = try repository.record(payment, from: account.id)
+        XCTAssertEqual(posting.loanExtraPaymentID, payment.id)
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(4_500))
+        XCTAssertEqual(try repository.schedule(for: loan.id, calendar: .current).totalExtraPrincipal.amount, Decimal(500))
+
+        _ = try repository.reverse(postingID: posting.id, description: "Undo extra payment", occurredAt: .now)
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(5_000))
+        XCTAssertEqual(try repository.schedule(for: loan.id, calendar: .current).totalExtraPrincipal.amount, .zero)
+    }
+
+    @MainActor
     func testScheduledMonthlyOccurrencesKeepAnchorAndPostingIsIdempotent() throws {
         let stack = try FinancePersistenceStack(inMemory: true)
         let repository = stack.repository

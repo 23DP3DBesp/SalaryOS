@@ -4531,9 +4531,24 @@
     },
     "debt.payment-account": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Account" } },
-        "lv": { "stringUnit": { "state": "translated", "value": "Konts" } },
-        "ru": { "stringUnit": { "state": "translated", "value": "Счёт" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konts"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Счёт"
+          }
+        }
       }
     },
     "debt.payment-note": {
@@ -5016,6 +5031,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сумма взноса"
+          }
+        }
+      }
+    },
+    "savings.contribution-account": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfer from account"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pārskaitīt no konta"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перевести со счёта"
           }
         }
       }
@@ -5698,6 +5735,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Дата платежа"
+          }
+        }
+      }
+    },
+    "loan.payment-account": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay from account"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maksāt no konta"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Счёт списания"
           }
         }
       }
@@ -7002,30 +7061,90 @@
     },
     "calendar.enable-reminders": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Enable reminders" } },
-        "lv": { "stringUnit": { "state": "translated", "value": "Ieslēgt atgādinājumus" } },
-        "ru": { "stringUnit": { "state": "translated", "value": "Включить напоминания" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable reminders"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ieslēgt atgādinājumus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включить напоминания"
+          }
+        }
       }
     },
     "calendar.disable-reminders": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Disable reminders" } },
-        "lv": { "stringUnit": { "state": "translated", "value": "Izslēgt atgādinājumus" } },
-        "ru": { "stringUnit": { "state": "translated", "value": "Выключить напоминания" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disable reminders"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Izslēgt atgādinājumus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выключить напоминания"
+          }
+        }
       }
     },
     "calendar.reminders.permission-required": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Allow notifications for SalaryOS in system settings to receive reminders." } },
-        "lv": { "stringUnit": { "state": "translated", "value": "Atļaujiet SalaryOS paziņojumus sistēmas iestatījumos, lai saņemtu atgādinājumus." } },
-        "ru": { "stringUnit": { "state": "translated", "value": "Разрешите уведомления SalaryOS в настройках системы, чтобы получать напоминания." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow notifications for SalaryOS in system settings to receive reminders."
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atļaujiet SalaryOS paziņojumus sistēmas iestatījumos, lai saņemtu atgādinājumus."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разрешите уведомления SalaryOS в настройках системы, чтобы получать напоминания."
+          }
+        }
       }
     },
     "calendar.edit-future-only": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Changes update future calendar events. Posted transactions stay unchanged." } },
-        "lv": { "stringUnit": { "state": "translated", "value": "Izmaiņas attiecas uz turpmākajiem kalendāra notikumiem. Iegrāmatotie darījumi nemainās." } },
-        "ru": { "stringUnit": { "state": "translated", "value": "Изменения применяются к будущим событиям. Проведённые операции не меняются." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changes update future calendar events. Posted transactions stay unchanged."
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Izmaiņas attiecas uz turpmākajiem kalendāra notikumiem. Iegrāmatotie darījumi nemainās."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Изменения применяются к будущим событиям. Проведённые операции не меняются."
+          }
+        }
       }
     },
     "common.post": {
@@ -7046,6 +7165,182 @@
           "stringUnit": {
             "state": "translated",
             "value": "Провести"
+          }
+        }
+      }
+    },
+    "dashboard.report.eyebrow": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Financial report"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finanšu pārskats"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Финансовый отчёт"
+          }
+        }
+      }
+    },
+    "dashboard.report.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income & Expenses"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ienākumi un izdevumi"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доходы и расходы"
+          }
+        }
+      }
+    },
+    "dashboard.report.updated": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated just now"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atjaunināts tikko"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обновлено сейчас"
+          }
+        }
+      }
+    },
+    "dashboard.report.net": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Net cash flow"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neto naudas plūsma"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Чистый денежный поток"
+          }
+        }
+      }
+    },
+    "dashboard.report.cashflow": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income and spending"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ienākumi un izdevumi"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доходы и расходы"
+          }
+        }
+      }
+    },
+    "dashboard.report.categories": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category spending"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Izdevumi kategorijās"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расходы по категориям"
+          }
+        }
+      }
+    },
+    "dashboard.report.daily": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daily spending"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dienas izdevumi"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расходы по дням"
+          }
+        }
+      }
+    },
+    "dashboard.report.accounts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accounts"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konti"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Счета"
           }
         }
       }

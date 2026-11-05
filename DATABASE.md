@@ -24,6 +24,8 @@ Money uses `Decimal`, rounds at the ISO currency's minor-unit precision, and rej
 
 Recording a debt repayment from the app requires selecting an asset account. The repository stores the payment and a linked balanced transfer atomically: payable debts debit the debt liability and credit cash; receivable debts debit cash and credit the receivable asset. These transfers do not count as income or spending. Reversing a linked transfer restores both the account balance and debt outstanding; the original payment remains in its audit history.
 
+Savings contributions and extra loan-principal payments also require a source asset account and are saved atomically with linked transfers. A contribution moves value to the goal's linked asset account, or to a synthetic goal asset when none is linked. An extra repayment debits the loan liability. Reversals restore the source account and remove the contribution or extra repayment from its progress/schedule calculation. Regular monthly loan installments are still estimates and are not recorded as payments.
+
 A debit increases the signed balance; a credit decreases it. That gives expected results for both assets (income debits, expenses/transfer-out credits) and liabilities (charges credit into a more negative balance; repayments debit toward zero).
 
 ## Ledger rules

@@ -50,6 +50,8 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
     public let relatedPostingID: UUID?
     public let scheduledOccurrenceID: String?
     public let debtPaymentID: UUID?
+    public let savingsContributionID: UUID?
+    public let loanExtraPaymentID: UUID?
     public let entries: [LedgerEntry]
     public let createdAt: Date
 
@@ -62,6 +64,8 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
         relatedPostingID: UUID? = nil,
         scheduledOccurrenceID: String? = nil,
         debtPaymentID: UUID? = nil,
+        savingsContributionID: UUID? = nil,
+        loanExtraPaymentID: UUID? = nil,
         entries: [LedgerEntry],
         createdAt: Date = .now
     ) throws {
@@ -88,6 +92,8 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
         self.relatedPostingID = relatedPostingID
         self.scheduledOccurrenceID = scheduledOccurrenceID
         self.debtPaymentID = debtPaymentID
+        self.savingsContributionID = savingsContributionID
+        self.loanExtraPaymentID = loanExtraPaymentID
         self.entries = entries
         self.createdAt = createdAt
     }
@@ -206,6 +212,46 @@ public enum LedgerFactory {
         )
     }
 
+    public static func savingsContribution(
+        goal: SavingsGoal, contribution: SavingsContribution, from account: Account
+    ) throws -> LedgerPosting {
+        guard contribution.goalID == goal.id else { throw SavingsGoalError.contributionCurrencyMismatch }
+        guard contribution.amount.currency == goal.currency else { throw SavingsGoalError.contributionCurrencyMismatch }
+        try validate(amount: contribution.amount, account: account)
+        guard !account.type.isLiability else { throw LedgerError.invalidAccountKinds(.transfer) }
+        let destinationID = goal.linkedAccountID ?? goal.id
+        guard destinationID != account.id else { throw LedgerError.invalidAccountKinds(.transfer) }
+        let entries = [
+            try LedgerEntry(accountID: destinationID, accountKind: .asset, side: .debit, money: contribution.amount),
+            try LedgerEntry(accountID: account.id, accountKind: .asset, side: .credit, money: contribution.amount)
+        ]
+        return try LedgerPosting(
+            kind: .transfer, occurredAt: contribution.contributedAt,
+            description: goal.name, notes: contribution.note,
+            savingsContributionID: contribution.id, entries: entries
+        )
+    }
+
+    public static func loanExtraPayment(
+        loan: Loan, payment: LoanExtraPayment, from account: Account
+    ) throws -> LedgerPosting {
+        guard payment.loanID == loan.id else { throw LoanError.wrongLoanReference }
+        guard payment.principalReduction.currency == loan.principal.currency else {
+            throw MoneyError.currencyMismatch(expected: loan.principal.currency.code, actual: payment.principalReduction.currency.code)
+        }
+        try validate(amount: payment.principalReduction, account: account)
+        guard !account.type.isLiability else { throw LedgerError.invalidAccountKinds(.transfer) }
+        let entries = [
+            try LedgerEntry(accountID: loan.id, accountKind: .liability, side: .debit, money: payment.principalReduction),
+            try LedgerEntry(accountID: account.id, accountKind: .asset, side: .credit, money: payment.principalReduction)
+        ]
+        return try LedgerPosting(
+            kind: .transfer, occurredAt: payment.paidAt,
+            description: loan.name, notes: payment.note,
+            loanExtraPaymentID: payment.id, entries: entries
+        )
+    }
+
     public static func refund(
         amount: Money, to account: Account, expenseCategoryID: UUID, originalPostingID: UUID,
         description: String, notes: String? = nil, occurredAt: Date = .now
@@ -266,7 +312,7 @@ extension LedgerEntry {
 
 extension LedgerPosting {
     private enum CodingKeys: String, CodingKey {
-        case id, kind, occurredAt, description, notes, relatedPostingID, scheduledOccurrenceID, debtPaymentID, entries, createdAt
+        case id, kind, occurredAt, description, notes, relatedPostingID, scheduledOccurrenceID, debtPaymentID, savingsContributionID, loanExtraPaymentID, entries, createdAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -280,6 +326,8 @@ extension LedgerPosting {
             relatedPostingID: container.decodeIfPresent(UUID.self, forKey: .relatedPostingID),
             scheduledOccurrenceID: container.decodeIfPresent(String.self, forKey: .scheduledOccurrenceID),
             debtPaymentID: container.decodeIfPresent(UUID.self, forKey: .debtPaymentID),
+            savingsContributionID: container.decodeIfPresent(UUID.self, forKey: .savingsContributionID),
+            loanExtraPaymentID: container.decodeIfPresent(UUID.self, forKey: .loanExtraPaymentID),
             entries: container.decode([LedgerEntry].self, forKey: .entries),
             createdAt: container.decode(Date.self, forKey: .createdAt)
         )

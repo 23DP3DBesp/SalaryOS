@@ -245,7 +245,13 @@ private struct LoanExtraPaymentEditor: View {
     @State private var amount = ""
     @State private var paidAt = Date.now
     @State private var note = ""
+    @State private var accounts: [Account] = []
+    @State private var accountID: UUID?
     @State private var errorMessage: String?
+
+    private var compatibleAccounts: [Account] {
+        accounts.filter { !$0.type.isLiability && $0.currency == loan.principal.currency }
+    }
 
     var body: some View {
         NavigationStack {
@@ -254,26 +260,41 @@ private struct LoanExtraPaymentEditor: View {
 #if os(iOS)
                     .keyboardType(.decimalPad)
 #endif
+                Picker("loan.payment-account", selection: $accountID) {
+                    Text("transactions.field.choose-account").tag(UUID?.none)
+                    ForEach(compatibleAccounts) { account in Text(account.name).tag(Optional(account.id)) }
+                }
                 DatePicker("loan.payment-date", selection: $paidAt, displayedComponents: .date)
                 TextField("loan.payment-note", text: $note)
             }
             .navigationTitle("loan.extra-payment")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("common.cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("common.save", action: save).disabled(Decimal(string: amount) == nil) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("common.save", action: save).disabled(Decimal(string: amount) == nil || accountID == nil)
+                }
             }
+            .task { loadAccounts() }
             .alert("common.error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
                 Button("common.ok", role: .cancel) { errorMessage = nil }
             } message: { Text(errorMessage ?? "") }
         }
-        .frame(minWidth: 340, minHeight: 280)
+        .frame(minWidth: 360, minHeight: 330)
+    }
+
+    private func loadAccounts() {
+        do {
+            accounts = try repository.accounts(includeArchived: false)
+            accountID = compatibleAccounts.first?.id
+        } catch { errorMessage = error.localizedDescription }
     }
 
     private func save() {
         do {
             guard let value = Decimal(string: amount.replacingOccurrences(of: ",", with: ".")) else { throw LoanError.nonPositiveExtraPayment }
+            guard let accountID else { return }
             let payment = try LoanExtraPayment(loanID: loan.id, principalReduction: Money(value, currency: loan.principal.currency), paidAt: paidAt, loan: loan, note: note)
-            try repository.record(payment)
+            _ = try repository.record(payment, from: accountID)
             dismiss()
         } catch { errorMessage = error.localizedDescription }
     }
