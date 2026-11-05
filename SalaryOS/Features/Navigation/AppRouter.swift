@@ -50,9 +50,14 @@ enum AppRoute: String, CaseIterable, Identifiable {
     }
 }
 
+private enum AppTab: Hashable {
+    case dashboard, accounts, transactions, more
+}
+
 struct AppRouter: View {
     let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & WorkTimeRepository & ScheduledOperationRepository
     @State private var selectedRoute: AppRoute = .dashboard
+    @State private var selectedTab: AppTab = .dashboard
     @State private var isAccountEditorPresented = false
     @State private var isTransactionEditorPresented = false
     @State private var sidebarAccounts: [Account] = []
@@ -60,52 +65,30 @@ struct AppRouter: View {
 
     var body: some View {
         #if os(iOS)
-        TabView(selection: $selectedRoute) {
+        TabView(selection: $selectedTab) {
             NavigationStack {
                 dashboard
             }
             .tabItem { Label(AppRoute.dashboard.title, systemImage: AppRoute.dashboard.symbol) }
-            .tag(AppRoute.dashboard)
+            .tag(AppTab.dashboard)
 
             NavigationStack {
                 AccountsView(repository: repository, isEditorPresented: $isAccountEditorPresented)
             }
             .tabItem { Label(AppRoute.accounts.title, systemImage: AppRoute.accounts.symbol) }
-            .tag(AppRoute.accounts)
+            .tag(AppTab.accounts)
 
             NavigationStack {
                 TransactionsView(repository: repository, isEditorPresented: $isTransactionEditorPresented)
             }
             .tabItem { Label(AppRoute.transactions.title, systemImage: AppRoute.transactions.symbol) }
-            .tag(AppRoute.transactions)
+            .tag(AppTab.transactions)
 
-            NavigationStack { SalaryView(repository: repository) }
-                .tabItem { Label(AppRoute.salary.title, systemImage: AppRoute.salary.symbol) }
-                .tag(AppRoute.salary)
-
-            NavigationStack { BudgetsView(repository: repository) }
-                .tabItem { Label(AppRoute.budgets.title, systemImage: AppRoute.budgets.symbol) }
-                .tag(AppRoute.budgets)
-
-            NavigationStack { DebtsView(repository: repository) }
-                .tabItem { Label(AppRoute.debts.title, systemImage: AppRoute.debts.symbol) }
-                .tag(AppRoute.debts)
-
-            NavigationStack { SavingsGoalsView(repository: repository) }
-                .tabItem { Label(AppRoute.savings.title, systemImage: AppRoute.savings.symbol) }
-                .tag(AppRoute.savings)
-
-            NavigationStack { LoansView(repository: repository) }
-                .tabItem { Label(AppRoute.loans.title, systemImage: AppRoute.loans.symbol) }
-                .tag(AppRoute.loans)
-
-            NavigationStack { WorkTimeView(repository: repository) }
-                .tabItem { Label(AppRoute.workTime.title, systemImage: AppRoute.workTime.symbol) }
-                .tag(AppRoute.workTime)
-
-            NavigationStack { CalendarView(repository: repository) }
-                .tabItem { Label(AppRoute.calendar.title, systemImage: AppRoute.calendar.symbol) }
-                .tag(AppRoute.calendar)
+            NavigationStack {
+                MoreNavigationView { route in AnyView(routeContent(route)) }
+            }
+            .tabItem { Label("navigation.more", systemImage: "ellipsis.circle") }
+            .tag(AppTab.more)
         }
         #else
         NavigationSplitView {
@@ -206,21 +189,68 @@ struct AppRouter: View {
         })
     }
 
+    @ViewBuilder private func routeContent(_ route: AppRoute) -> some View {
+        switch route {
+        case .dashboard, .incomeExpenses: dashboard
+        case .accounts: AccountsView(repository: repository, isEditorPresented: $isAccountEditorPresented)
+        case .transactions: TransactionsView(repository: repository, isEditorPresented: $isTransactionEditorPresented)
+        case .salary: SalaryView(repository: repository)
+        case .budgets: BudgetsView(repository: repository)
+        case .debts: DebtsView(repository: repository)
+        case .savings: SavingsGoalsView(repository: repository)
+        case .loans: LoansView(repository: repository)
+        case .workTime: WorkTimeView(repository: repository)
+        case .calendar: CalendarView(repository: repository)
+        }
+    }
+
     private var dashboard: some View {
         DashboardView(
             repository: repository,
             onAddAccount: {
                 selectedRoute = .accounts
+                selectedTab = .accounts
                 isAccountEditorPresented = true
             },
             onOpenAccounts: {
                 selectedRoute = .accounts
+                selectedTab = .accounts
             },
             onAddTransaction: {
                 selectedRoute = .transactions
+                selectedTab = .transactions
                 isTransactionEditorPresented = true
             }
         )
+    }
+}
+
+private struct MoreNavigationView: View {
+    let destination: (AppRoute) -> AnyView
+
+    var body: some View {
+        List {
+            Section("sidebar.planning") {
+                routeLink(.salary)
+                routeLink(.budgets)
+                routeLink(.debts)
+                routeLink(.savings)
+                routeLink(.loans)
+            }
+            Section("sidebar.reports") {
+                routeLink(.incomeExpenses)
+                routeLink(.workTime)
+                routeLink(.calendar)
+            }
+        }
+        .navigationTitle("navigation.more")
+        .navigationDestination(for: AppRoute.self, destination: destination)
+    }
+
+    private func routeLink(_ route: AppRoute) -> some View {
+        NavigationLink(value: route) {
+            Label(route.title, systemImage: route.symbol)
+        }
     }
 }
 

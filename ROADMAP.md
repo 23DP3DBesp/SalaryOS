@@ -14,7 +14,7 @@
 
 ## Phase 3 — Main finance experience
 
-**Complete:** added account creation, editing, archival and search; transaction creation, detail, search, type filters, duplication, reversal and correction; custom income/expense categories; iPhone tabs and a macOS sidebar; a configurable dashboard with reorderable/hideable widgets, six-month per-currency charts, balances, monthly cash flow and recent transactions. All displayed financial figures come from persisted data and localize in Latvian, English and Russian.
+**Complete:** added account creation, editing, archival and search; transaction creation, detail, search, type filters, duplication, reversal and correction; custom income/expense categories; compact iPhone tabs with a grouped “More” screen; and a grouped macOS finance sidebar with live account balances. The configurable dashboard now includes annual monthly cash-flow charts, prior-year comparison, category spending, account balances, and recent transactions. All displayed financial figures come from persisted data and localize in Latvian, English and Russian.
 
 ## Phase 4 — Salary and Latvian tax engine
 
@@ -22,8 +22,14 @@
 
 ## Later phases
 
-- Phase 5 (in progress): category budgets are persisted and show current-period spending and remaining amount from real ledger data; weekly/monthly/yearly periods supported. Personal debt tracking supports payable/receivable obligations, due dates, notes, partial repayments, and payment history. In-app repayments post a linked balanced transfer with reversal support. Savings goals support targets, optional dates/accounts, immutable contributions, progress, and monthly targets; contributions post transfers with reversal-aware progress. Loan tracking supports fixed/variable rates, versioned rates, fees, amortization estimates, and extra-principal repayment recalculation; extra repayments post linked transfers and are removed from the estimate when reversed. Regular scheduled loan installments still need a payment-history and ledger workflow.
+- Phase 5 (in progress): category budgets are persisted and show current-period spending and remaining amount from real ledger data; weekly/monthly/yearly periods supported. Personal debt tracking supports payable/receivable obligations, due dates, notes, partial repayments, and payment history. In-app repayments post a linked balanced transfer with reversal support. Savings goals support targets, optional dates/accounts, immutable contributions, progress, and monthly targets; contributions post transfers with reversal-aware progress. Loan tracking supports fixed/variable rates, versioned rates, fees, amortization estimates, and extra-principal repayment recalculation; extra repayments post linked transfers and are removed from the estimate when reversed. **Next:** add a first-class payment-history and ledger workflow for scheduled monthly loan installments.
 - Phase 6 (in progress): work-time entries support employer, shift interval, unpaid break, hourly rate, overlap validation, and monthly hours/gross estimates. Financial calendar previews weekly/monthly/yearly income and expense occurrences, supports explicit idempotent ledger posting, offers opt-in local reminders for the next 48 unposted events, and lets users change the schedule from its next upcoming occurrence while preserving posted history. Device sync for reminders remains.
 - Phase 7: backup, import/export, and CloudKit sync.
 - Phase 8: evaluated banking provider boundary and required backend work.
 - Phase 9: end-to-end quality, privacy, accessibility, and release documentation.
+
+## Next planned work
+
+1. Record regular loan installments as linked ledger transfers, retain payment history, and make reversals update the outstanding balance and future schedule.
+2. Finish the remaining Phase 4 and Phase 6 follow-ups documented above.
+3. Continue with Phase 7 backup/import/export and sync, then Phase 8 provider integration and Phase 9 release readiness.
