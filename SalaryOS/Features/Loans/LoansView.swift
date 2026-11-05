@@ -7,6 +7,7 @@ struct LoansView: View {
     @State private var editorLoan: Loan?
     @State private var isEditorPresented = false
     @State private var extraPaymentLoan: Loan?
+    @State private var regularPaymentContext: LoanPaymentContext?
     @State private var rateChangeLoan: Loan?
     @State private var errorMessage: String?
 
@@ -34,6 +35,9 @@ struct LoansView: View {
         }
         .sheet(item: $extraPaymentLoan, onDismiss: reload) { loan in
             LoanExtraPaymentEditor(repository: repository, loan: loan)
+        }
+        .sheet(item: $regularPaymentContext, onDismiss: reload) { context in
+            LoanPaymentEditor(repository: repository, loan: context.loan, installment: context.installment)
         }
         .sheet(item: $rateChangeLoan, onDismiss: reload) { loan in
             LoanRateEditor(repository: repository, loan: loan)
@@ -91,6 +95,15 @@ struct LoansView: View {
                                 Text("\(String(localized: "loan.interest")): \(money(installment.interest))")
                             }
                             .font(.caption).foregroundStyle(.secondary)
+                            if let paymentDate = installment.paymentDate {
+                                Label("\(String(localized: "loan.payment-recorded")) · \(paymentDate.formatted(date: .abbreviated, time: .omitted))", systemImage: "checkmark.circle.fill")
+                                    .font(.caption).foregroundStyle(.green)
+                            } else {
+                                Button("loan.record-payment", systemImage: "checkmark.circle") {
+                                    regularPaymentContext = LoanPaymentContext(loan: loan, installment: installment)
+                                }
+                                .font(.caption)
+                            }
                             if installment.extraPrincipalPaid.amount > .zero {
                                 Text("\(String(localized: "loan.extra-principal")): \(money(installment.extraPrincipalPaid))")
                                     .font(.caption).foregroundStyle(.secondary)
@@ -129,6 +142,12 @@ struct LoansView: View {
         do { var value = loan; value.setArchived(true); try repository.save(value); reload() }
         catch { errorMessage = error.localizedDescription }
     }
+}
+
+private struct LoanPaymentContext: Identifiable {
+    let loan: Loan
+    let installment: LoanInstallment
+    var id: String { "\(loan.id)-\(installment.id)" }
 }
 
 private struct LoanEditor: View {
@@ -297,6 +316,102 @@ private struct LoanExtraPaymentEditor: View {
             _ = try repository.record(payment, from: accountID)
             dismiss()
         } catch { errorMessage = error.localizedDescription }
+    }
+}
+
+private struct LoanPaymentEditor: View {
+    let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository
+    let loan: Loan
+    let installment: LoanInstallment
+    @Environment(\.dismiss) private var dismiss
+    @State private var principal = ""
+    @State private var interest = ""
+    @State private var paidAt = Date.now
+    @State private var note = ""
+    @State private var accounts: [Account] = []
+    @State private var categories: [SalaryOSDomain.Category] = []
+    @State private var accountID: UUID?
+    @State private var categoryID: UUID?
+    @State private var errorMessage: String?
+
+    private var compatibleAccounts: [Account] {
+        accounts.filter { !$0.type.isLiability && $0.currency == loan.principal.currency }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                LabeledContent("loan.installment", value: String(installment.id))
+                TextField("loan.principal-paid", text: $principal)
+#if os(iOS)
+                    .keyboardType(.decimalPad)
+#endif
+                TextField("loan.interest", text: $interest)
+#if os(iOS)
+                    .keyboardType(.decimalPad)
+#endif
+                Picker("loan.payment-account", selection: $accountID) {
+                    Text("transactions.field.choose-account").tag(UUID?.none)
+                    ForEach(compatibleAccounts) { account in Text(account.name).tag(Optional(account.id)) }
+                }
+                if Decimal(string: interest.replacingOccurrences(of: ",", with: ".")) ?? .zero > .zero {
+                    Picker("loan.interest-category", selection: $categoryID) {
+                        Text("transactions.field.choose-category").tag(UUID?.none)
+                        ForEach(categories) { category in Text(category.name).tag(Optional(category.id)) }
+                    }
+                }
+                DatePicker("loan.payment-date", selection: $paidAt, displayedComponents: .date)
+                TextField("loan.payment-note", text: $note)
+            }
+            .navigationTitle("loan.record-payment")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("common.cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("common.save", action: save).disabled(!canSave)
+                }
+            }
+            .task { loadChoices() }
+            .alert("common.error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+                Button("common.ok", role: .cancel) { errorMessage = nil }
+            } message: { Text(errorMessage ?? "") }
+        }
+        .frame(minWidth: 380, minHeight: 420)
+    }
+
+    private var canSave: Bool {
+        guard let principalValue = decimal(principal), let interestValue = decimal(interest),
+              principalValue >= .zero, interestValue >= .zero,
+              principalValue + interestValue > .zero, accountID != nil else { return false }
+        return interestValue == .zero || categoryID != nil
+    }
+
+    private func loadChoices() {
+        do {
+            accounts = try repository.accounts(includeArchived: false)
+            categories = try repository.categories(kind: .expense, includeArchived: false)
+            accountID = compatibleAccounts.first?.id
+            categoryID = categories.first?.id
+            principal = NSDecimalNumber(decimal: installment.principalPaid.amount).stringValue
+            interest = NSDecimalNumber(decimal: installment.interest.amount).stringValue
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    private func save() {
+        do {
+            guard let principalValue = decimal(principal), let interestValue = decimal(interest), let accountID else { return }
+            let payment = try LoanPayment(
+                loanID: loan.id, installmentNumber: installment.id,
+                principalPaid: Money(principalValue, currency: loan.principal.currency),
+                interestPaid: Money(interestValue, currency: loan.principal.currency),
+                paidAt: paidAt, loan: loan, note: note
+            )
+            _ = try repository.record(payment, from: accountID, interestCategoryID: categoryID)
+            dismiss()
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    private func decimal(_ value: String) -> Decimal? {
+        Decimal(string: value.replacingOccurrences(of: ",", with: "."))
     }
 }
 

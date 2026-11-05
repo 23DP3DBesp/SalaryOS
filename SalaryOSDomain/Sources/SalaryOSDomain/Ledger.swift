@@ -52,6 +52,7 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
     public let debtPaymentID: UUID?
     public let savingsContributionID: UUID?
     public let loanExtraPaymentID: UUID?
+    public let loanPaymentID: UUID?
     public let entries: [LedgerEntry]
     public let createdAt: Date
 
@@ -66,6 +67,7 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
         debtPaymentID: UUID? = nil,
         savingsContributionID: UUID? = nil,
         loanExtraPaymentID: UUID? = nil,
+        loanPaymentID: UUID? = nil,
         entries: [LedgerEntry],
         createdAt: Date = .now
     ) throws {
@@ -94,6 +96,7 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
         self.debtPaymentID = debtPaymentID
         self.savingsContributionID = savingsContributionID
         self.loanExtraPaymentID = loanExtraPaymentID
+        self.loanPaymentID = loanPaymentID
         self.entries = entries
         self.createdAt = createdAt
     }
@@ -252,6 +255,28 @@ public enum LedgerFactory {
         )
     }
 
+    public static func loanPayment(
+        loan: Loan, payment: LoanPayment, from account: Account, interestCategoryID: UUID?
+    ) throws -> LedgerPosting {
+        guard payment.loanID == loan.id else { throw LoanError.wrongLoanReference }
+        let amount = try Money(payment.amount, currency: loan.principal.currency)
+        try validate(amount: amount, account: account)
+        guard !account.type.isLiability else { throw LedgerError.invalidAccountKinds(.adjustment) }
+        var entries: [LedgerEntry] = []
+        if payment.principalPaid.amount > .zero {
+            entries.append(try LedgerEntry(accountID: loan.id, accountKind: .liability, side: .debit, money: payment.principalPaid))
+        }
+        if payment.interestPaid.amount > .zero {
+            guard let interestCategoryID else { throw LedgerError.invalidAccountKinds(.adjustment) }
+            entries.append(try LedgerEntry(accountID: interestCategoryID, accountKind: .expense, side: .debit, money: payment.interestPaid))
+        }
+        entries.append(try LedgerEntry(accountID: account.id, accountKind: .asset, side: .credit, money: amount))
+        return try LedgerPosting(
+            kind: .adjustment, occurredAt: payment.paidAt, description: loan.name,
+            notes: payment.note, loanPaymentID: payment.id, entries: entries
+        )
+    }
+
     public static func refund(
         amount: Money, to account: Account, expenseCategoryID: UUID, originalPostingID: UUID,
         description: String, notes: String? = nil, occurredAt: Date = .now
@@ -312,7 +337,7 @@ extension LedgerEntry {
 
 extension LedgerPosting {
     private enum CodingKeys: String, CodingKey {
-        case id, kind, occurredAt, description, notes, relatedPostingID, scheduledOccurrenceID, debtPaymentID, savingsContributionID, loanExtraPaymentID, entries, createdAt
+        case id, kind, occurredAt, description, notes, relatedPostingID, scheduledOccurrenceID, debtPaymentID, savingsContributionID, loanExtraPaymentID, loanPaymentID, entries, createdAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -328,6 +353,7 @@ extension LedgerPosting {
             debtPaymentID: container.decodeIfPresent(UUID.self, forKey: .debtPaymentID),
             savingsContributionID: container.decodeIfPresent(UUID.self, forKey: .savingsContributionID),
             loanExtraPaymentID: container.decodeIfPresent(UUID.self, forKey: .loanExtraPaymentID),
+            loanPaymentID: container.decodeIfPresent(UUID.self, forKey: .loanPaymentID),
             entries: container.decode([LedgerEntry].self, forKey: .entries),
             createdAt: container.decode(Date.self, forKey: .createdAt)
         )

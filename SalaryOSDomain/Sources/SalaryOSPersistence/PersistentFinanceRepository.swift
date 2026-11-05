@@ -85,6 +85,7 @@ final class PersistedLedgerPosting {
     var debtPaymentID: UUID?
     var savingsContributionID: UUID?
     var loanExtraPaymentID: UUID?
+    var loanPaymentID: UUID?
     var entriesData: Data
     var createdAt: Date
 
@@ -99,6 +100,7 @@ final class PersistedLedgerPosting {
         debtPaymentID = posting.debtPaymentID
         savingsContributionID = posting.savingsContributionID
         loanExtraPaymentID = posting.loanExtraPaymentID
+        loanPaymentID = posting.loanPaymentID
         self.entriesData = entriesData
         createdAt = posting.createdAt
     }
@@ -113,6 +115,7 @@ final class PersistedLedgerPosting {
             notes: notes, relatedPostingID: relatedPostingID,
             scheduledOccurrenceID: scheduledOccurrenceID, debtPaymentID: debtPaymentID,
             savingsContributionID: savingsContributionID, loanExtraPaymentID: loanExtraPaymentID,
+            loanPaymentID: loanPaymentID,
             entries: entries, createdAt: createdAt
         )
     }
@@ -389,6 +392,40 @@ final class PersistedLoanExtraPayment {
 }
 
 @Model
+final class PersistedLoanPayment {
+    var id: UUID
+    var loanID: UUID
+    var installmentNumber: Int
+    var currencyCode: String
+    var principalPaid: Decimal
+    var interestPaid: Decimal
+    var paidAt: Date
+    var note: String?
+    var createdAt: Date
+
+    init(_ payment: LoanPayment) {
+        id = payment.id
+        loanID = payment.loanID
+        installmentNumber = payment.installmentNumber
+        currencyCode = payment.principalPaid.currency.code
+        principalPaid = payment.principalPaid.amount
+        interestPaid = payment.interestPaid.amount
+        paidAt = payment.paidAt
+        note = payment.note
+        createdAt = payment.createdAt
+    }
+
+    func domainValue(loan: Loan) throws -> LoanPayment {
+        try LoanPayment(
+            id: id, loanID: loanID, installmentNumber: installmentNumber,
+            principalPaid: Money(principalPaid, currency: Currency(code: currencyCode)),
+            interestPaid: Money(interestPaid, currency: Currency(code: currencyCode)),
+            paidAt: paidAt, loan: loan, note: note, createdAt: createdAt
+        )
+    }
+}
+
+@Model
 final class PersistedWorkEntry {
     var id: UUID
     var employer: String
@@ -619,6 +656,24 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
                 throw RepositoryError.invalidLedgerReference(payment.loanID)
             }
             guard !existing.contains(where: { $0.loanExtraPaymentID == paymentID }) else {
+                throw RepositoryError.duplicateIdentifier(paymentID)
+            }
+        }
+        if let paymentID = posting.loanPaymentID {
+            let payments = try context.fetch(FetchDescriptor<PersistedLoanPayment>())
+            guard let stored = payments.first(where: { $0.id == paymentID }) else {
+                throw RepositoryError.loanPaymentNotFound(paymentID)
+            }
+            guard let loan = try loan(id: stored.loanID) else { throw RepositoryError.loanNotFound(stored.loanID) }
+            let payment = try stored.domainValue(loan: loan)
+            let paymentAmount = try Money(payment.amount, currency: loan.principal.currency)
+            guard posting.kind == .adjustment, posting.occurredAt == payment.paidAt,
+                  posting.entries.contains(where: { $0.accountID == loan.id && $0.accountKind == .liability && $0.side == .debit && $0.money == payment.principalPaid }) == (payment.principalPaid.amount > .zero),
+                  posting.entries.contains(where: { $0.money.amount == payment.interestPaid.amount && $0.accountKind == .expense && $0.side == .debit }) == (payment.interestPaid.amount > .zero),
+                  posting.entries.contains(where: { $0.accountKind == .asset && $0.side == .credit && $0.money == paymentAmount }) else {
+                throw RepositoryError.invalidLedgerReference(payment.loanID)
+            }
+            guard !existing.contains(where: { $0.loanPaymentID == paymentID }) else {
                 throw RepositoryError.duplicateIdentifier(paymentID)
             }
         }
@@ -1040,6 +1095,43 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         return posting
     }
 
+    func record(_ payment: LoanPayment, from accountID: UUID, interestCategoryID: UUID?) throws -> LedgerPosting {
+        guard let loan = try loan(id: payment.loanID) else { throw RepositoryError.loanNotFound(payment.loanID) }
+        guard !loan.isArchived else { throw RepositoryError.invalidLedgerReference(loan.id) }
+        let records = try context.fetch(FetchDescriptor<PersistedLoanPayment>())
+        try ensureUniqueIDs(records)
+        guard !records.contains(where: { $0.id == payment.id }) else { throw RepositoryError.duplicateIdentifier(payment.id) }
+        let active = try activeLoanPayments(from: records, loan: loan)
+        guard !active.contains(where: { $0.installmentNumber == payment.installmentNumber }) else {
+            throw LoanError.duplicateInstallmentPayment
+        }
+        _ = try LoanCalculator.schedule(for: loan, rateChanges: rateChanges(for: loan.id), extraPayments: extraPayments(for: loan.id), regularPayments: active + [payment])
+        guard let account = try account(id: accountID) else { throw RepositoryError.accountNotFound(accountID) }
+        guard !account.isArchived else { throw RepositoryError.archivedAccount(account.id) }
+        if payment.interestPaid.amount > .zero {
+            guard let interestCategoryID,
+                  try categories(kind: .expense, includeArchived: false).contains(where: { $0.id == interestCategoryID }) else {
+                throw RepositoryError.invalidLedgerReference(interestCategoryID ?? loan.id)
+            }
+        }
+        let posting = try LedgerFactory.loanPayment(loan: loan, payment: payment, from: account, interestCategoryID: interestCategoryID)
+        let postings = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        try ensureUniqueIDs(postings)
+        guard !postings.contains(where: { $0.loanPaymentID == payment.id }) else { throw RepositoryError.duplicateIdentifier(payment.id) }
+        try validateReferences(in: posting)
+        context.insert(PersistedLoanPayment(payment))
+        context.insert(PersistedLedgerPosting(posting, entriesData: try encoder.encode(posting.entries)))
+        try commit()
+        return posting
+    }
+
+    func payments(for loanID: UUID) throws -> [LoanPayment] {
+        guard let loan = try loan(id: loanID) else { throw RepositoryError.loanNotFound(loanID) }
+        let records = try context.fetch(FetchDescriptor<PersistedLoanPayment>())
+        try ensureUniqueIDs(records)
+        return try activeLoanPayments(from: records, loan: loan).sorted { $0.installmentNumber < $1.installmentNumber }
+    }
+
     func extraPayments(for loanID: UUID) throws -> [LoanExtraPayment] {
         guard let loan = try loan(id: loanID) else { throw RepositoryError.loanNotFound(loanID) }
         let records = try context.fetch(FetchDescriptor<PersistedLoanExtraPayment>())
@@ -1049,7 +1141,7 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
 
     func schedule(for loanID: UUID, calendar: Calendar = .current) throws -> LoanSchedule {
         guard let loan = try loan(id: loanID) else { throw RepositoryError.loanNotFound(loanID) }
-        return try LoanCalculator.schedule(for: loan, rateChanges: rateChanges(for: loanID), extraPayments: extraPayments(for: loanID), calendar: calendar)
+        return try LoanCalculator.schedule(for: loan, rateChanges: rateChanges(for: loanID), extraPayments: extraPayments(for: loanID), regularPayments: payments(for: loanID), calendar: calendar)
     }
 
     func save(_ entry: WorkEntry) throws {
@@ -1232,6 +1324,19 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
             .map { try $0.domainValue(loan: loan) }
     }
 
+    private func activeLoanPayments(from records: [PersistedLoanPayment], loan: Loan) throws -> [LoanPayment] {
+        let postings = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        let reversedPostingIDs = Set(postings
+            .filter { $0.kindRawValue == TransactionKind.reversal.rawValue }
+            .compactMap(\.relatedPostingID))
+        let reversedPaymentIDs = Set(postings
+            .filter { reversedPostingIDs.contains($0.id) }
+            .compactMap(\.loanPaymentID))
+        return try records
+            .filter { $0.loanID == loan.id && !reversedPaymentIDs.contains($0.id) }
+            .map { try $0.domainValue(loan: loan) }
+    }
+
     private func commit() throws {
         do {
             try context.save()
@@ -1372,7 +1477,7 @@ public final class FinancePersistenceStack {
     public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & WorkTimeRepository & ScheduledOperationRepository
 
     public init(inMemory: Bool = false) throws {
-        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self, PersistedSavingsGoal.self, PersistedSavingsContribution.self, PersistedLoan.self, PersistedLoanRateChange.self, PersistedLoanExtraPayment.self, PersistedWorkEntry.self, PersistedScheduledOperation.self])
+        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self, PersistedSavingsGoal.self, PersistedSavingsContribution.self, PersistedLoan.self, PersistedLoanRateChange.self, PersistedLoanExtraPayment.self, PersistedLoanPayment.self, PersistedWorkEntry.self, PersistedScheduledOperation.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         modelContainer = container

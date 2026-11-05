@@ -101,6 +101,43 @@ final class PersistentFinanceRepositoryTests: XCTestCase {
     }
 
     @MainActor
+    func testRegularLoanPaymentPostsPrincipalAndInterestAndReversalRestoresSchedule() throws {
+        let repository = try FinancePersistenceStack(inMemory: true).repository
+        let eur = try Currency(code: "EUR")
+        let account = try Account(name: "Main", type: .current, currency: eur, openingBalance: Money(Decimal(2_000), currency: eur))
+        let interestCategory = try Category(name: "Loan interest", kind: .expense)
+        let loan = try Loan(
+            name: "Car loan", lender: "Bank", principal: Money(Decimal(2_000), currency: eur),
+            annualInterestRate: 12, durationMonths: 12,
+            startDate: ISO8601DateFormatter().date(from: "2025-01-01T00:00:00Z")!,
+            fees: Money(.zero, currency: eur)
+        )
+        try repository.save(account)
+        try repository.save(interestCategory)
+        try repository.save(loan)
+        let before = try repository.schedule(for: loan.id, calendar: .current)
+        let installment = try XCTUnwrap(before.installments.first)
+        let payment = try LoanPayment(
+            loanID: loan.id, installmentNumber: installment.id,
+            principalPaid: Money(installment.principalPaid.amount, currency: eur),
+            interestPaid: Money(installment.interest.amount, currency: eur),
+            paidAt: installment.dueDate, loan: loan
+        )
+
+        let posting = try repository.record(payment, from: account.id, interestCategoryID: interestCategory.id)
+        XCTAssertEqual(posting.loanPaymentID, payment.id)
+        XCTAssertEqual(posting.kind, .adjustment)
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(2_000) - payment.amount)
+        let paidSchedule = try repository.schedule(for: loan.id, calendar: .current)
+        XCTAssertTrue(try XCTUnwrap(paidSchedule.installments.first).isPaid)
+        XCTAssertEqual(paidSchedule.installments.first?.closingBalance.amount, installment.closingBalance.amount)
+
+        _ = try repository.reverse(postingID: posting.id, description: "Undo installment", occurredAt: .now)
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(2_000))
+        XCTAssertFalse(try XCTUnwrap(repository.schedule(for: loan.id, calendar: .current).installments.first).isPaid)
+    }
+
+    @MainActor
     func testScheduledMonthlyOccurrencesKeepAnchorAndPostingIsIdempotent() throws {
         let stack = try FinancePersistenceStack(inMemory: true)
         let repository = stack.repository

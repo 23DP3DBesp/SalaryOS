@@ -111,8 +111,12 @@ private final class DashboardViewModel {
                     row.income -= posting.entries.filter { $0.accountKind == .income && $0.side == .debit }.reduce(.zero) { $0 + $1.money.amount }
                 } else if original.kind == .expense {
                     row.expenses -= posting.entries.filter { $0.accountKind == .expense && $0.side == .credit }.reduce(.zero) { $0 + $1.money.amount }
+                } else if original.kind == .adjustment {
+                    row.expenses -= posting.entries.filter { $0.accountKind == .expense && $0.side == .credit }.reduce(.zero) { $0 + $1.money.amount }
                 }
-            case .transfer, .adjustment: break
+            case .adjustment:
+                row.expenses += posting.entries.filter { $0.accountKind == .expense && $0.side == .debit }.reduce(.zero) { $0 + $1.money.amount }
+            case .transfer: break
             }
             rows[month] = row
         }
@@ -133,10 +137,14 @@ private final class DashboardViewModel {
                 guard let original = postings.first(where: { $0.id == posting.relatedPostingID }) else { continue }
                 if original.kind == .expense {
                     for entry in posting.entries where entry.accountKind == .expense && entry.side == .credit { totals[entry.accountID, default: .zero] -= entry.money.amount }
+                } else if original.kind == .adjustment {
+                    for entry in posting.entries where entry.accountKind == .expense && entry.side == .credit { totals[entry.accountID, default: .zero] -= entry.money.amount }
                 } else if original.kind == .refund {
                     for entry in posting.entries where entry.accountKind == .expense && entry.side == .debit { totals[entry.accountID, default: .zero] += entry.money.amount }
                 }
-            case .income, .transfer, .adjustment: break
+            case .adjustment:
+                for entry in posting.entries where entry.accountKind == .expense && entry.side == .debit { totals[entry.accountID, default: .zero] += entry.money.amount }
+            case .income, .transfer: break
             }
         }
         return totals.compactMap { id, amount in
@@ -170,12 +178,15 @@ private final class DashboardViewModel {
             let reverseSide: EntrySide = kind == .expense ? .credit : .debit
             var sign: Decimal = 1
             switch posting.kind {
-            case .expense where kind == .expense, .income where kind != .expense: break
+            case .expense where kind == .expense, .income where kind != .expense,
+                 .adjustment where kind == .expense: break
             case .refund where kind == .expense: sign = -1
             case .reversal:
                 guard let original = postings.first(where: { $0.id == posting.relatedPostingID }) else { continue }
                 if original.kind == .refund && kind == .expense { sign = 1 }
-                else if (original.kind == .expense && kind == .expense) || (original.kind == .income && kind != .expense) { sign = -1 }
+                else if (original.kind == .expense && kind == .expense)
+                    || (original.kind == .adjustment && kind == .expense)
+                    || (original.kind == .income && kind != .expense) { sign = -1 }
                 else { continue }
             default: continue
             }
@@ -505,6 +516,10 @@ struct DashboardView: View {
                 switch posting.kind {
                 case .expense: return total + posting.entries.filter { $0.accountKind == .expense && $0.side == .debit }.reduce(.zero) { $0 + $1.money.amount }
                 case .refund: return total - posting.entries.filter { $0.accountKind == .expense && $0.side == .credit }.reduce(.zero) { $0 + $1.money.amount }
+                case .adjustment: return total + posting.entries.filter { $0.accountKind == .expense && $0.side == .debit }.reduce(.zero) { $0 + $1.money.amount }
+                case .reversal:
+                    guard let original = model.postings.first(where: { $0.id == posting.relatedPostingID }), original.kind == .adjustment else { return total }
+                    return total - posting.entries.filter { $0.accountKind == .expense && $0.side == .credit }.reduce(.zero) { $0 + $1.money.amount }
                 default: return total
                 }
             }

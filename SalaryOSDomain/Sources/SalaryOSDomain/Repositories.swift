@@ -91,6 +91,8 @@ public protocol LoanRepository: AnyObject {
     func record(_ payment: LoanExtraPayment) throws
     func record(_ payment: LoanExtraPayment, from accountID: UUID) throws -> LedgerPosting
     func extraPayments(for loanID: UUID) throws -> [LoanExtraPayment]
+    func record(_ payment: LoanPayment, from accountID: UUID, interestCategoryID: UUID?) throws -> LedgerPosting
+    func payments(for loanID: UUID) throws -> [LoanPayment]
     func schedule(for loanID: UUID, calendar: Calendar) throws -> LoanSchedule
 }
 

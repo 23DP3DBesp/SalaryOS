@@ -22,7 +22,7 @@
 
 ## Later phases
 
-- Phase 5 (in progress): category budgets are persisted and show current-period spending and remaining amount from real ledger data; weekly/monthly/yearly periods supported. Personal debt tracking supports payable/receivable obligations, due dates, notes, partial repayments, and payment history. In-app repayments post a linked balanced transfer with reversal support. Savings goals support targets, optional dates/accounts, immutable contributions, progress, and monthly targets; contributions post transfers with reversal-aware progress. Loan tracking supports fixed/variable rates, versioned rates, fees, amortization estimates, and extra-principal repayment recalculation; extra repayments post linked transfers and are removed from the estimate when reversed. **Next:** add a first-class payment-history and ledger workflow for scheduled monthly loan installments.
+- Phase 5 (complete): category budgets are persisted and show current-period spending and remaining amount from real ledger data; weekly/monthly/yearly periods supported. Personal debt tracking supports payable/receivable obligations, due dates, notes, partial repayments, and payment history. In-app repayments post linked balanced transfers with reversal support. Savings goals support targets, optional dates/accounts, immutable contributions, progress, and monthly targets; contributions post transfers with reversal-aware progress. Loan tracking supports fixed/variable rates, versioned rates, fees, amortization estimates, and extra-principal repayment recalculation; extra and regular installment payments post linked ledger entries, retain payment dates/history in the schedule, and are removed from the active schedule when reversed.
 - Phase 6 (in progress): work-time entries support employer, shift interval, unpaid break, hourly rate, overlap validation, and monthly hours/gross estimates. Financial calendar previews weekly/monthly/yearly income and expense occurrences, supports explicit idempotent ledger posting, offers opt-in local reminders for the next 48 unposted events, and lets users change the schedule from its next upcoming occurrence while preserving posted history. Device sync for reminders remains.
 - Phase 7: backup, import/export, and CloudKit sync.
 - Phase 8: evaluated banking provider boundary and required backend work.
@@ -30,6 +30,5 @@
 
 ## Next planned work
 
-1. Record regular loan installments as linked ledger transfers, retain payment history, and make reversals update the outstanding balance and future schedule.
-2. Finish the remaining Phase 4 and Phase 6 follow-ups documented above.
-3. Continue with Phase 7 backup/import/export and sync, then Phase 8 provider integration and Phase 9 release readiness.
+1. Finish the remaining Phase 4 and Phase 6 follow-ups documented above.
+2. Continue with Phase 7 backup/import/export and sync, then Phase 8 provider integration and Phase 9 release readiness.

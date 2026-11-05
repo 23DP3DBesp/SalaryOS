@@ -17,6 +17,8 @@ public enum LoanError: Error, Equatable {
     case nonPositiveExtraPayment
     case extraPaymentBeforeStart
     case extraPaymentExceedsBalance
+    case invalidInstallmentNumber
+    case duplicateInstallmentPayment
     case wrongLoanReference
     case invalidSchedule
 }
@@ -131,6 +133,42 @@ public struct LoanExtraPayment: Identifiable, Hashable, Codable, Sendable {
     }
 }
 
+public struct LoanPayment: Identifiable, Hashable, Codable, Sendable {
+    public let id: UUID
+    public let loanID: UUID
+    public let installmentNumber: Int
+    public let principalPaid: Money
+    public let interestPaid: Money
+    public let paidAt: Date
+    public let note: String?
+    public let createdAt: Date
+
+    public var amount: Decimal { principalPaid.amount + interestPaid.amount }
+
+    public init(
+        id: UUID = UUID(), loanID: UUID, installmentNumber: Int,
+        principalPaid: Money, interestPaid: Money, paidAt: Date,
+        loan: Loan, note: String? = nil, createdAt: Date = .now
+    ) throws {
+        guard loanID == loan.id else { throw LoanError.wrongLoanReference }
+        guard (1...loan.durationMonths).contains(installmentNumber) else { throw LoanError.invalidInstallmentNumber }
+        guard principalPaid.currency == loan.principal.currency, interestPaid.currency == loan.principal.currency else {
+            throw MoneyError.currencyMismatch(expected: loan.principal.currency.code, actual: principalPaid.currency.code)
+        }
+        guard principalPaid.amount >= .zero, interestPaid.amount >= .zero,
+              principalPaid.amount + interestPaid.amount > .zero else { throw LoanError.nonPositiveExtraPayment }
+        guard paidAt >= loan.startDate else { throw LoanError.extraPaymentBeforeStart }
+        self.id = id
+        self.loanID = loanID
+        self.installmentNumber = installmentNumber
+        self.principalPaid = principalPaid
+        self.interestPaid = interestPaid
+        self.paidAt = paidAt
+        self.note = note?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        self.createdAt = createdAt
+    }
+}
+
 public struct LoanInstallment: Identifiable, Hashable, Sendable {
     public let id: Int
     public let dueDate: Date
@@ -141,6 +179,8 @@ public struct LoanInstallment: Identifiable, Hashable, Sendable {
     public let principalPaid: Money
     public let extraPrincipalPaid: Money
     public let closingBalance: Money
+    public let paymentDate: Date?
+    public var isPaid: Bool { paymentDate != nil }
 }
 
 public struct LoanSchedule: Equatable, Sendable {
@@ -161,9 +201,10 @@ public enum LoanCalculator {
         for loan: Loan,
         rateChanges: [LoanRateChange] = [],
         extraPayments: [LoanExtraPayment] = [],
+        regularPayments: [LoanPayment] = [],
         calendar: Calendar = .current
     ) throws -> LoanSchedule {
-        guard rateChanges.allSatisfy({ $0.loanID == loan.id }), extraPayments.allSatisfy({ $0.loanID == loan.id }) else {
+        guard rateChanges.allSatisfy({ $0.loanID == loan.id }), extraPayments.allSatisfy({ $0.loanID == loan.id }), regularPayments.allSatisfy({ $0.loanID == loan.id }) else {
             throw LoanError.wrongLoanReference
         }
         guard rateChanges.allSatisfy({ loan.rateType == .variable && $0.effectiveDate >= loan.startDate }),
@@ -172,6 +213,9 @@ public enum LoanCalculator {
         }
         let orderedRates = rateChanges.sorted { $0.effectiveDate < $1.effectiveDate }
         let orderedExtras = extraPayments.sorted { $0.paidAt < $1.paidAt }
+        guard Set(regularPayments.map(\.installmentNumber)).count == regularPayments.count,
+              regularPayments.allSatisfy({ (1...loan.durationMonths).contains($0.installmentNumber) }) else { throw LoanError.duplicateInstallmentPayment }
+        let paymentsByInstallment = Dictionary(uniqueKeysWithValues: regularPayments.map { ($0.installmentNumber, $0) })
         let currency = loan.principal.currency
         var balance = loan.principal.amount
         var totalInterest = Decimal.zero
@@ -203,24 +247,39 @@ public enum LoanCalculator {
             let monthlyRate = rate / Decimal(1200)
             let interest = try Money(balance * monthlyRate, currency: currency).amount
             let periodsRemaining = loan.durationMonths - month + 1
-            let paymentAmount = try annuityPayment(principal: balance, monthlyRate: monthlyRate, periods: periodsRemaining, currency: currency).amount
-            let payment = min(paymentAmount, balance + interest)
-            let principalPaid = min(balance, max(.zero, payment - interest))
+            let scheduledPayment = paymentsByInstallment[month]
+            let payment: Decimal
+            let principalPaid: Decimal
+            let interestForPeriod: Decimal
+            if let scheduledPayment {
+                guard scheduledPayment.principalPaid.amount <= balance else { throw LoanError.extraPaymentExceedsBalance }
+                payment = scheduledPayment.amount
+                principalPaid = scheduledPayment.principalPaid.amount
+                interestForPeriod = scheduledPayment.interestPaid.amount
+            } else {
+                let paymentAmount = try annuityPayment(principal: balance, monthlyRate: monthlyRate, periods: periodsRemaining, currency: currency).amount
+                payment = min(paymentAmount, balance + interest)
+                principalPaid = min(balance, max(.zero, payment - interest))
+                interestForPeriod = interest
+            }
             balance = max(.zero, balance - principalPaid)
             let regularMoney = try Money(payment, currency: currency)
-            let interestMoney = try Money(interest, currency: currency)
+            let interestMoney = try Money(interestForPeriod, currency: currency)
             let principalMoney = try Money(principalPaid, currency: currency)
             let extraMoney = try Money(extraThisMonth, currency: currency)
             let closingMoney = try Money(balance, currency: currency)
             installments.append(LoanInstallment(
                 id: month, dueDate: dueDate, openingBalance: try Money(opening, currency: currency),
                 appliedRate: rate, regularPayment: regularMoney, interest: interestMoney,
-                principalPaid: principalMoney, extraPrincipalPaid: extraMoney, closingBalance: closingMoney
+                principalPaid: principalMoney, extraPrincipalPaid: extraMoney, closingBalance: closingMoney,
+                paymentDate: scheduledPayment?.paidAt
             ))
             totalInterest += interest
             totalRegular += payment
         }
         guard extraIndex == orderedExtras.count else { throw LoanError.extraPaymentExceedsBalance }
+        let recordedInstallments = Set(installments.filter(\.isPaid).map(\.id))
+        guard Set(paymentsByInstallment.keys).isSubset(of: recordedInstallments) else { throw LoanError.invalidSchedule }
         let totalCost = totalRegular + totalExtra + loan.fees.amount
         return LoanSchedule(
             installments: installments,
