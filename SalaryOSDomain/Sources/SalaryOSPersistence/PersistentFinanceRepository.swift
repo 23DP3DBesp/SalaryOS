@@ -278,17 +278,117 @@ final class PersistedSavingsContribution {
     }
 }
 
+@Model
+final class PersistedLoan {
+    var id: UUID
+    var name: String
+    var lender: String
+    var currencyCode: String
+    var principalAmount: Decimal
+    var rateTypeRawValue: String
+    var annualInterestRate: Decimal
+    var durationMonths: Int
+    var startDate: Date
+    var feesAmount: Decimal
+    var notes: String?
+    var createdAt: Date
+    var updatedAt: Date
+    var isArchived: Bool
+
+    init(_ loan: Loan) {
+        id = loan.id
+        name = loan.name
+        lender = loan.lender
+        currencyCode = loan.principal.currency.code
+        principalAmount = loan.principal.amount
+        rateTypeRawValue = loan.rateType.rawValue
+        annualInterestRate = loan.annualInterestRate
+        durationMonths = loan.durationMonths
+        startDate = loan.startDate
+        feesAmount = loan.fees.amount
+        notes = loan.notes
+        createdAt = loan.createdAt
+        updatedAt = loan.updatedAt
+        isArchived = loan.isArchived
+    }
+
+    func domainValue() throws -> Loan {
+        guard let rateType = LoanRateType(rawValue: rateTypeRawValue) else {
+            throw PersistenceMappingError.invalidLoanRateType(rateTypeRawValue)
+        }
+        let currency = try Currency(code: currencyCode)
+        return try Loan(
+            id: id, name: name, lender: lender,
+            principal: Money(principalAmount, currency: currency), annualInterestRate: annualInterestRate,
+            rateType: rateType, durationMonths: durationMonths, startDate: startDate,
+            fees: Money(feesAmount, currency: currency), notes: notes,
+            createdAt: createdAt, updatedAt: updatedAt, isArchived: isArchived
+        )
+    }
+}
+
+@Model
+final class PersistedLoanRateChange {
+    var id: UUID
+    var loanID: UUID
+    var annualInterestRate: Decimal
+    var effectiveDate: Date
+    var createdAt: Date
+
+    init(_ value: LoanRateChange) {
+        id = value.id
+        loanID = value.loanID
+        annualInterestRate = value.annualInterestRate
+        effectiveDate = value.effectiveDate
+        createdAt = value.createdAt
+    }
+
+    func domainValue(loan: Loan) throws -> LoanRateChange {
+        try LoanRateChange(id: id, loanID: loanID, annualInterestRate: annualInterestRate, effectiveDate: effectiveDate, loan: loan, createdAt: createdAt)
+    }
+}
+
+@Model
+final class PersistedLoanExtraPayment {
+    var id: UUID
+    var loanID: UUID
+    var currencyCode: String
+    var principalReduction: Decimal
+    var paidAt: Date
+    var note: String?
+    var createdAt: Date
+
+    init(_ value: LoanExtraPayment) {
+        id = value.id
+        loanID = value.loanID
+        currencyCode = value.principalReduction.currency.code
+        principalReduction = value.principalReduction.amount
+        paidAt = value.paidAt
+        note = value.note
+        createdAt = value.createdAt
+    }
+
+    func domainValue(loan: Loan) throws -> LoanExtraPayment {
+        try LoanExtraPayment(
+            id: id, loanID: loanID,
+            principalReduction: Money(principalReduction, currency: Currency(code: currencyCode)),
+            paidAt: paidAt, loan: loan, note: note, createdAt: createdAt
+        )
+    }
+}
+
 enum PersistenceMappingError: Error {
     case invalidAccountType(String)
     case invalidCategoryKind(String)
     case invalidTransactionKind(String)
     case invalidBudgetPeriod(String)
     case invalidDebtDirection(String)
+    case invalidLoanRateType(String)
 }
 
 /// Keeps each posting and its entries in one persisted record so they are saved atomically.
 @MainActor
-final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository, DebtRepository, SavingsGoalRepository {
+final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository, DebtRepository, SavingsGoalRepository, LoanRepository {
     private let context: ModelContext
     private let encoder = JSONEncoder()
 
@@ -638,6 +738,84 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         return try SavingsGoalProgress(goal: goal, contributions: contributions(for: goalID), asOf: date, calendar: calendar)
     }
 
+    func save(_ loan: Loan) throws {
+        let records = try context.fetch(FetchDescriptor<PersistedLoan>())
+        try ensureUniqueIDs(records)
+        if let existing = records.first(where: { $0.id == loan.id }) {
+            guard existing.principalAmount == loan.principal.amount,
+                  existing.currencyCode == loan.principal.currency.code,
+                  existing.rateTypeRawValue == loan.rateType.rawValue,
+                  existing.durationMonths == loan.durationMonths,
+                  existing.startDate == loan.startDate,
+                  existing.feesAmount == loan.fees.amount else {
+                throw RepositoryError.loanTermsConflict(loan.id)
+            }
+            existing.name = loan.name
+            existing.lender = loan.lender
+            existing.notes = loan.notes
+            existing.isArchived = loan.isArchived
+            existing.updatedAt = .now
+        } else {
+            context.insert(PersistedLoan(loan))
+        }
+        try commit()
+    }
+
+    func loan(id: UUID) throws -> Loan? {
+        let records = try context.fetch(FetchDescriptor<PersistedLoan>())
+        try ensureUniqueIDs(records)
+        return try records.first(where: { $0.id == id })?.domainValue()
+    }
+
+    func loans(includeArchived: Bool = false) throws -> [Loan] {
+        let records = try context.fetch(FetchDescriptor<PersistedLoan>())
+        try ensureUniqueIDs(records)
+        return try records.filter { includeArchived || !$0.isArchived }.map { try $0.domainValue() }
+    }
+
+    func record(_ rateChange: LoanRateChange) throws {
+        guard let loan = try loan(id: rateChange.loanID) else { throw RepositoryError.loanNotFound(rateChange.loanID) }
+        _ = try LoanRateChange(id: rateChange.id, loanID: rateChange.loanID, annualInterestRate: rateChange.annualInterestRate, effectiveDate: rateChange.effectiveDate, loan: loan, createdAt: rateChange.createdAt)
+        let records = try context.fetch(FetchDescriptor<PersistedLoanRateChange>())
+        try ensureUniqueIDs(records)
+        guard !records.contains(where: { $0.id == rateChange.id }) else { throw RepositoryError.duplicateIdentifier(rateChange.id) }
+        guard !records.contains(where: { $0.loanID == rateChange.loanID && $0.effectiveDate == rateChange.effectiveDate }) else {
+            throw RepositoryError.duplicateLoanRateDate(rateChange.effectiveDate)
+        }
+        context.insert(PersistedLoanRateChange(rateChange))
+        try commit()
+    }
+
+    func rateChanges(for loanID: UUID) throws -> [LoanRateChange] {
+        guard let loan = try loan(id: loanID) else { throw RepositoryError.loanNotFound(loanID) }
+        let records = try context.fetch(FetchDescriptor<PersistedLoanRateChange>())
+        try ensureUniqueIDs(records)
+        return try records.filter { $0.loanID == loanID }.map { try $0.domainValue(loan: loan) }.sorted { $0.effectiveDate < $1.effectiveDate }
+    }
+
+    func record(_ payment: LoanExtraPayment) throws {
+        guard let loan = try loan(id: payment.loanID) else { throw RepositoryError.loanNotFound(payment.loanID) }
+        let records = try context.fetch(FetchDescriptor<PersistedLoanExtraPayment>())
+        try ensureUniqueIDs(records)
+        guard !records.contains(where: { $0.id == payment.id }) else { throw RepositoryError.duplicateIdentifier(payment.id) }
+        let existing = try records.filter { $0.loanID == loan.id }.map { try $0.domainValue(loan: loan) }
+        _ = try LoanCalculator.schedule(for: loan, rateChanges: rateChanges(for: loan.id), extraPayments: existing + [payment])
+        context.insert(PersistedLoanExtraPayment(payment))
+        try commit()
+    }
+
+    func extraPayments(for loanID: UUID) throws -> [LoanExtraPayment] {
+        guard let loan = try loan(id: loanID) else { throw RepositoryError.loanNotFound(loanID) }
+        let records = try context.fetch(FetchDescriptor<PersistedLoanExtraPayment>())
+        try ensureUniqueIDs(records)
+        return try records.filter { $0.loanID == loanID }.map { try $0.domainValue(loan: loan) }.sorted { $0.paidAt < $1.paidAt }
+    }
+
+    func schedule(for loanID: UUID, calendar: Calendar = .current) throws -> LoanSchedule {
+        guard let loan = try loan(id: loanID) else { throw RepositoryError.loanNotFound(loanID) }
+        return try LoanCalculator.schedule(for: loan, rateChanges: rateChanges(for: loanID), extraPayments: extraPayments(for: loanID), calendar: calendar)
+    }
+
 
     private func ensureUniqueIDs<Record: Identifiable>(_ records: [Record]) throws where Record.ID == UUID {
         var identifiers = Set<UUID>()
@@ -755,10 +933,10 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
 @MainActor
 public final class FinancePersistenceStack {
     public let modelContainer: ModelContainer
-    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository
+    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository
 
     public init(inMemory: Bool = false) throws {
-        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self, PersistedSavingsGoal.self, PersistedSavingsContribution.self])
+        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self, PersistedSavingsGoal.self, PersistedSavingsContribution.self, PersistedLoan.self, PersistedLoanRateChange.self, PersistedLoanExtraPayment.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         modelContainer = container
