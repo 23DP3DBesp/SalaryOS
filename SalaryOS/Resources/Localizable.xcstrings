@@ -7344,6 +7344,28 @@
           }
         }
       }
+    },
+    "dashboard.report.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report header"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pārskata virsraksts"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заголовок отчёта"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
