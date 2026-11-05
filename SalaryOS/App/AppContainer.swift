@@ -1,12 +1,15 @@
+import SalaryOSDomain
+import SalaryOSPersistence
 import SwiftData
 
 @MainActor
 final class AppContainer {
     let modelContainer: ModelContainer
+    let financeRepository: any AccountRepository & CategoryRepository & LedgerRepository
 
     init() throws {
-        let schema = Schema([])
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-        modelContainer = try ModelContainer(for: schema, configurations: [configuration])
+        let persistenceStack = try FinancePersistenceStack()
+        modelContainer = persistenceStack.modelContainer
+        financeRepository = persistenceStack.repository
     }
 }
