@@ -910,6 +910,292 @@
         "lv" : { "stringUnit" : { "state" : "translated", "value" : "Izvēlieties, kurus finanšu rādītājus rādīt." } },
         "ru" : { "stringUnit" : { "state" : "translated", "value" : "Выберите финансовые сводки для отображения." } }
       }
+    },
+    "navigation.salary": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salary"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alga"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зарплата"
+          }
+        }
+      }
+    },
+    "salary.input-section": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly salary"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mēneša alga"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Месячная alga"
+          }
+        }
+      }
+    },
+    "salary.gross": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gross salary (EUR)"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bruto alga (EUR)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зарплата до налогов (EUR)"
+          }
+        }
+      }
+    },
+    "salary.booklet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tax booklet submitted to this employer"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algas nodokļa grāmatiņa iesniegta šim darba devējam"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Налоговая книжка подана этому работодателю"
+          }
+        }
+      }
+    },
+    "salary.dependents %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dependents: %lld"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apgādājamie: %lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Иждивенцы: %lld"
+          }
+        }
+      }
+    },
+    "salary.result-section": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estimated monthly result"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aptuvenais mēneša aprēķins"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оценка за месяц"
+          }
+        }
+      }
+    },
+    "salary.net": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Net salary"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alga pēc nodokļiem"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На руки"
+          }
+        }
+      }
+    },
+    "salary.employee-contribution": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Employee social contributions"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Darbinieka sociālās iemaksas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Социальные взносы работника"
+          }
+        }
+      }
+    },
+    "salary.income-tax": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income tax withheld"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ieturētais algas nodoklis"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удержанный подоходный налог"
+          }
+        }
+      }
+    },
+    "salary.employer-contribution": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Employer social contributions"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Darba devēja sociālās iemaksas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Социальные взносы работодателя"
+          }
+        }
+      }
+    },
+    "salary.employer-cost": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total employer cost"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopējās darba devēja izmaksas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полная стоимость для работодателя"
+          }
+        }
+      }
+    },
+    "salary.disclaimer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estimate for standard employment under Latvia’s 2026 rules. It excludes solidarity tax settlement, minimum social contribution reconciliation, annual deductions and declaration adjustments."
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aprēķins standarta darba attiecībām pēc Latvijas 2026. gada noteikumiem. Nav iekļauts solidaritātes nodokļa norēķins, minimālo sociālo iemaksu pārrēķins, gada atvieglojumi un deklarācijas korekcijas."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оценка для стандартных трудовых отношений по правилам Латвии на 2026 год. Не учитываются расчёт налога солидарности, перерасчёт минимальных социальных взносов, годовые вычеты и корректировки декларации."
+          }
+        }
+      }
+    },
+    "salary.invalid-input": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid gross salary"
+          }
+        },
+        "lv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ievadiet derīgu bruto algu"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Введите корректную сумму до налогов"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

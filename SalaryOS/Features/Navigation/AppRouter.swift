@@ -6,6 +6,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
     case dashboard
     case accounts
     case transactions
+    case salary
 
     var id: String { rawValue }
 
@@ -14,6 +15,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
         case .dashboard: "navigation.dashboard"
         case .accounts: "navigation.accounts"
         case .transactions: "navigation.transactions"
+        case .salary: "navigation.salary"
         }
     }
 
@@ -22,6 +24,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
         case .dashboard: "square.grid.2x2"
         case .accounts: "building.columns"
         case .transactions: "list.bullet.rectangle"
+        case .salary: "eurosign.circle"
         }
     }
 }
@@ -52,6 +55,10 @@ struct AppRouter: View {
             }
             .tabItem { Label(AppRoute.transactions.title, systemImage: AppRoute.transactions.symbol) }
             .tag(AppRoute.transactions)
+
+            NavigationStack { SalaryView() }
+                .tabItem { Label(AppRoute.salary.title, systemImage: AppRoute.salary.symbol) }
+                .tag(AppRoute.salary)
         }
         #else
         NavigationSplitView {
@@ -69,6 +76,8 @@ struct AppRouter: View {
                 AccountsView(repository: repository, isEditorPresented: $isAccountEditorPresented)
             case .transactions:
                 TransactionsView(repository: repository, isEditorPresented: $isTransactionEditorPresented)
+            case .salary:
+                SalaryView()
             }
         }
         #endif

@@ -50,3 +50,11 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer /Applications/Xcode.app
 ```
 
 Xcode emits the App Intents metadata warning because the app does not link `AppIntents`; this project does not define App Intents. Persistence integration tests currently use an in-memory SwiftData store. Disk migration, CloudKit, cross-device widget settings, backup/restore, and conflict resolution remain future work.
+
+
+## Phase 4 salary and tax engine (in progress)
+
+- Added the standalone `SalaryOSTax` package target and an adaptive salary calculator screen in Latvian, English, and Russian.
+- Added Latvia 2026 standard-employment monthly gross-to-net, employer cost, and annual progressive PIT estimate using `Decimal`.
+- Rule set `LV-2026-v1` records effective dates, official sources, verification date, rates and thresholds. Unknown years fail closed.
+- Calculation assumptions and exclusions are documented in `TAX_ENGINE.md`. This is an estimate, not annual return preparation.

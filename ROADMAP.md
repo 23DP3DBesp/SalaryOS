@@ -18,7 +18,7 @@
 
 ## Phase 4 — Salary and Latvian tax engine
 
-Next: verify official Latvian rules, add versioned tax configurations and calculation tests, then implement salary profiles and calculation scenarios.
+**In progress:** verified the 2026 Latvian standard employee rates against VID/FM; added the versioned `SalaryOSTax` module, a monthly gross-to-net and employer-cost calculator, an annual progressive PIT estimate, and the first salary screen. See [TAX_ENGINE.md](TAX_ENGINE.md) for rule sources and calculation boundaries. Salary profiles, other employment classes, variable-pay annual reconciliation, and history remain future work.
 
 ## Later phases
 
