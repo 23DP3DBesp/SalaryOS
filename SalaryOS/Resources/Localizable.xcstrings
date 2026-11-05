@@ -1,0 +1,41 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "dashboard.empty.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your financial overview will appear here once you add your data." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Jūsu finanšu pārskats būs pieejams pēc datu pievienošanas." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Здесь появится финансовый обзор после добавления данных." } }
+      }
+    },
+    "dashboard.empty.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your finances, at a glance" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Jūsu finanšu pārskats" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Обзор ваших финансов" } }
+      }
+    },
+    "startup.storage-error.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "SalaryOS could not open its local data store. The diagnostic is shown below." } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "SalaryOS neizdevās atvērt vietējo datu krātuvi. Diagnostika ir redzama zemāk." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не удалось открыть локальное хранилище SalaryOS. Диагностика приведена ниже." } }
+      }
+    },
+    "startup.storage-error.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Data store unavailable" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Datu krātuve nav pieejama" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Хранилище недоступно" } }
+      }
+    },
+    "navigation.dashboard" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dashboard" } },
+        "lv" : { "stringUnit" : { "state" : "translated", "value" : "Pārskats" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Обзор" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}
