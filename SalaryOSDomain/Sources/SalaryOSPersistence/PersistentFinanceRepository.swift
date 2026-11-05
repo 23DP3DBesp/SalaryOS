@@ -377,6 +377,45 @@ final class PersistedLoanExtraPayment {
     }
 }
 
+@Model
+final class PersistedWorkEntry {
+    var id: UUID
+    var employer: String
+    var descriptionText: String
+    var startedAt: Date
+    var endedAt: Date
+    var unpaidBreakMinutes: Int
+    var currencyCode: String
+    var hourlyRate: Decimal
+    var notes: String?
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(_ entry: WorkEntry) {
+        id = entry.id
+        employer = entry.employer
+        descriptionText = entry.description
+        startedAt = entry.startedAt
+        endedAt = entry.endedAt
+        unpaidBreakMinutes = entry.unpaidBreakMinutes
+        currencyCode = entry.hourlyRate.currency.code
+        hourlyRate = entry.hourlyRate.amount
+        notes = entry.notes
+        createdAt = entry.createdAt
+        updatedAt = entry.updatedAt
+    }
+
+    func domainValue() throws -> WorkEntry {
+        try WorkEntry(
+            id: id, employer: employer, description: descriptionText,
+            startedAt: startedAt, endedAt: endedAt,
+            unpaidBreakMinutes: unpaidBreakMinutes,
+            hourlyRate: Money(hourlyRate, currency: Currency(code: currencyCode)),
+            notes: notes, createdAt: createdAt, updatedAt: updatedAt
+        )
+    }
+}
+
 enum PersistenceMappingError: Error {
     case invalidAccountType(String)
     case invalidCategoryKind(String)
@@ -388,7 +427,7 @@ enum PersistenceMappingError: Error {
 
 /// Keeps each posting and its entries in one persisted record so they are saved atomically.
 @MainActor
-final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository, DebtRepository, SavingsGoalRepository, LoanRepository {
+final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository, DebtRepository, SavingsGoalRepository, LoanRepository, WorkTimeRepository {
     private let context: ModelContext
     private let encoder = JSONEncoder()
 
@@ -816,6 +855,49 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         return try LoanCalculator.schedule(for: loan, rateChanges: rateChanges(for: loanID), extraPayments: extraPayments(for: loanID), calendar: calendar)
     }
 
+    func save(_ entry: WorkEntry) throws {
+        let records = try context.fetch(FetchDescriptor<PersistedWorkEntry>())
+        try ensureUniqueIDs(records)
+        let existingEntries = try records.map { try $0.domainValue() }
+        try WorkTimeCalculator.validateNoOverlap(entry, among: existingEntries)
+        if let record = records.first(where: { $0.id == entry.id }) {
+            record.employer = entry.employer
+            record.descriptionText = entry.description
+            record.startedAt = entry.startedAt
+            record.endedAt = entry.endedAt
+            record.unpaidBreakMinutes = entry.unpaidBreakMinutes
+            record.currencyCode = entry.hourlyRate.currency.code
+            record.hourlyRate = entry.hourlyRate.amount
+            record.notes = entry.notes
+            record.updatedAt = .now
+        } else {
+            context.insert(PersistedWorkEntry(entry))
+        }
+        try commit()
+    }
+
+    func entry(id: UUID) throws -> WorkEntry? {
+        let records = try context.fetch(FetchDescriptor<PersistedWorkEntry>())
+        try ensureUniqueIDs(records)
+        return try records.first(where: { $0.id == id })?.domainValue()
+    }
+
+    func entries(from start: Date, through end: Date) throws -> [WorkEntry] {
+        let records = try context.fetch(FetchDescriptor<PersistedWorkEntry>())
+        try ensureUniqueIDs(records)
+        return try records.filter { $0.startedAt >= start && $0.startedAt <= end }
+            .map { try $0.domainValue() }
+            .sorted { $0.startedAt > $1.startedAt }
+    }
+
+    func entries(overlapping start: Date, end: Date) throws -> [WorkEntry] {
+        let records = try context.fetch(FetchDescriptor<PersistedWorkEntry>())
+        try ensureUniqueIDs(records)
+        return try records.filter { $0.startedAt < end && $0.endedAt > start }
+            .map { try $0.domainValue() }
+            .sorted { $0.startedAt > $1.startedAt }
+    }
+
 
     private func ensureUniqueIDs<Record: Identifiable>(_ records: [Record]) throws where Record.ID == UUID {
         var identifiers = Set<UUID>()
@@ -933,10 +1015,10 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
 @MainActor
 public final class FinancePersistenceStack {
     public let modelContainer: ModelContainer
-    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository
+    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & WorkTimeRepository
 
     public init(inMemory: Bool = false) throws {
-        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self, PersistedSavingsGoal.self, PersistedSavingsContribution.self, PersistedLoan.self, PersistedLoanRateChange.self, PersistedLoanExtraPayment.self])
+        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self, PersistedSavingsGoal.self, PersistedSavingsContribution.self, PersistedLoan.self, PersistedLoanRateChange.self, PersistedLoanExtraPayment.self, PersistedWorkEntry.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         modelContainer = container

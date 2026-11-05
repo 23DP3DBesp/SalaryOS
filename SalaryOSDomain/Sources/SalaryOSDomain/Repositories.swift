@@ -20,6 +20,7 @@ public enum RepositoryError: Error, Equatable {
     case loanNotFound(UUID)
     case loanTermsConflict(UUID)
     case duplicateLoanRateDate(Date)
+    case workEntryNotFound(UUID)
 }
 
 @MainActor
@@ -84,4 +85,12 @@ public protocol LoanRepository: AnyObject {
     func record(_ payment: LoanExtraPayment) throws
     func extraPayments(for loanID: UUID) throws -> [LoanExtraPayment]
     func schedule(for loanID: UUID, calendar: Calendar) throws -> LoanSchedule
+}
+
+@MainActor
+public protocol WorkTimeRepository: AnyObject {
+    func save(_ entry: WorkEntry) throws
+    func entry(id: UUID) throws -> WorkEntry?
+    func entries(from start: Date, through end: Date) throws -> [WorkEntry]
+    func entries(overlapping start: Date, end: Date) throws -> [WorkEntry]
 }
