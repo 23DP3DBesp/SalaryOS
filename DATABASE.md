@@ -14,6 +14,7 @@
 - **Loan rate change:** immutable annual rate and effective date for variable-rate loans.
 - **Loan extra repayment:** immutable principal reduction, payment date, and note. Extra repayments are applied at the monthly period boundary in the estimate.
 - **Work entry:** employer, description, start/end instants, unpaid break, hourly rate/currency, notes, and timestamps. Overlapping entries are rejected.
+- **Scheduled operation:** income/expense template, amount/currency, account/category, recurrence frequency, anchor date, optional end date, notes, and archive state. Posted ledger records carry a stable occurrence ID to prevent duplicate generation.
 
 Each posting and its entries are stored in one SwiftData record and saved together. Account/category/posting ID uniqueness checks happen in the repository; no CloudKit uniqueness constraint is used. Corrections preserve the original posting, append an exact side-swapped reversal, then append the corrected posting in one save. A failed correction adds neither record.
 
@@ -46,6 +47,8 @@ Savings progress is derived from all saved contributions and the configured targ
 Loan schedules are estimates generated with Decimal arithmetic. Variable-rate changes are stored with effective dates; the calculator recalculates the monthly installment while retaining the original payoff term. Extra principal repayments are stored separately and applied at their calendar-month boundary. Fees are included in estimated total cost but are not folded into the principal. Loan estimates and recorded repayments do not update account balances or the transaction ledger; actual bank payments must be recorded separately until loan-ledger integration is implemented. Bank-specific day-count rules, payment holidays, rate floors, and contract fees are not modeled.
 
 Work-time summaries group shifts by employer and currency for the month in which each shift starts. Unpaid breaks are deducted from elapsed seconds; hours and gross estimates use Decimal. Gross estimates exclude tax withholding, overtime premiums, night work and holiday rates, and are not payroll results. Salary income must still be recorded separately in the ledger.
+
+Scheduled operations generate calendar occurrences from a stable first-date anchor. Monthly recurrence preserves the anchor day (clamping to the last valid day of shorter months); yearly recurrence handles leap-day anchors by clamping in non-leap years. Occurrences are previewed and posted only after an explicit user action. Their stable IDs are stored on ledger postings, so retrying a post cannot duplicate it even when the actual transaction date differs from the scheduled date. Editing amount/name leaves prior postings immutable; changing the recurrence definition is not supported in-place in this first version.
 
 ## Persistence limitations
 

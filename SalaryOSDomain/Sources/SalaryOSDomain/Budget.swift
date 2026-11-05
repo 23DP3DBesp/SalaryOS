@@ -92,8 +92,7 @@ public enum BudgetCalendar {
               let interval = calendar.dateInterval(of: period.calendarComponent, for: date) else {
             throw BudgetError.invalidPeriod
         }
-        let end = interval.end.addingTimeInterval(-1)
-        return (start, end)
+        return (start, interval.end)
     }
 }
 

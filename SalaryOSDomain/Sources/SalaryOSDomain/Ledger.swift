@@ -48,6 +48,7 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
     public let description: String
     public let notes: String?
     public let relatedPostingID: UUID?
+    public let scheduledOccurrenceID: String?
     public let entries: [LedgerEntry]
     public let createdAt: Date
 
@@ -58,6 +59,7 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
         description: String,
         notes: String? = nil,
         relatedPostingID: UUID? = nil,
+        scheduledOccurrenceID: String? = nil,
         entries: [LedgerEntry],
         createdAt: Date = .now
     ) throws {
@@ -82,6 +84,7 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
         self.description = cleanedDescription
         self.notes = notes
         self.relatedPostingID = relatedPostingID
+        self.scheduledOccurrenceID = scheduledOccurrenceID
         self.entries = entries
         self.createdAt = createdAt
     }
@@ -231,7 +234,7 @@ extension LedgerEntry {
 
 extension LedgerPosting {
     private enum CodingKeys: String, CodingKey {
-        case id, kind, occurredAt, description, notes, relatedPostingID, entries, createdAt
+        case id, kind, occurredAt, description, notes, relatedPostingID, scheduledOccurrenceID, entries, createdAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -243,6 +246,7 @@ extension LedgerPosting {
             description: container.decode(String.self, forKey: .description),
             notes: container.decodeIfPresent(String.self, forKey: .notes),
             relatedPostingID: container.decodeIfPresent(UUID.self, forKey: .relatedPostingID),
+            scheduledOccurrenceID: container.decodeIfPresent(String.self, forKey: .scheduledOccurrenceID),
             entries: container.decode([LedgerEntry].self, forKey: .entries),
             createdAt: container.decode(Date.self, forKey: .createdAt)
         )

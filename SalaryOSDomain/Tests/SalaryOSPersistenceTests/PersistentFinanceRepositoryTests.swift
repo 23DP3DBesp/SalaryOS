@@ -5,6 +5,37 @@ import SalaryOSPersistence
 
 final class PersistentFinanceRepositoryTests: XCTestCase {
     @MainActor
+    func testScheduledMonthlyOccurrencesKeepAnchorAndPostingIsIdempotent() throws {
+        let stack = try FinancePersistenceStack(inMemory: true)
+        let repository = stack.repository
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let eur = try Currency(code: "EUR")
+        let account = try Account(name: "Bank", type: .current, currency: eur)
+        let category = try Category(name: "Rent", kind: .expense)
+        try repository.save(account)
+        try repository.save(category)
+        let anchor = ISO8601DateFormatter().date(from: "2026-01-31T00:00:00Z")!
+        let operation = try ScheduledOperation(
+            name: "Rent", kind: .expense, amount: Money(Decimal(500), currency: eur),
+            accountID: account.id, categoryID: category.id, recurrence: .monthly, startDate: anchor
+        )
+        let occurrences = try RecurrenceCalendar.occurrences(
+            for: operation,
+            from: ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z")!,
+            through: ISO8601DateFormatter().date(from: "2026-03-31T00:00:00Z")!,
+            calendar: calendar
+        )
+        XCTAssertEqual(occurrences.map { calendar.component(.day, from: $0.dueDate) }, [31, 28, 31])
+        try repository.save(operation)
+
+        let posting = try repository.postOccurrence(operationID: operation.id, dueDate: occurrences[0].dueDate, occurredAt: occurrences[0].dueDate)
+        XCTAssertEqual(posting.scheduledOccurrenceID, occurrences[0].id)
+        XCTAssertThrowsError(try repository.postOccurrence(operationID: operation.id, dueDate: occurrences[0].dueDate, occurredAt: occurrences[0].dueDate))
+        XCTAssertEqual(try repository.postings(from: nil, through: nil).count, 1)
+    }
+
+    @MainActor
     func testBudgetProgressUsesExpensesAndSubtractsRefunds() throws {
         let stack = try FinancePersistenceStack(inMemory: true)
         let repository = stack.repository
@@ -28,7 +59,7 @@ final class PersistentFinanceRepositoryTests: XCTestCase {
         let budget = try Budget(name: "Food", categoryID: food.id, limit: Money(Decimal(100), currency: eur))
         try repository.save(budget)
 
-        let progress = try repository.progress(for: budget, on: now)
+        let progress = try repository.progress(for: budget, on: now, calendar: .current)
         XCTAssertEqual(progress.spent.amount, Decimal(65))
         XCTAssertEqual(progress.remaining.amount, Decimal(35))
     }
@@ -39,7 +70,8 @@ final class PersistentFinanceRepositoryTests: XCTestCase {
         let repository = stack.repository
         let income = try Category(name: "Salary", kind: .salary)
         try repository.save(income)
-        let budget = try Budget(name: "Invalid", categoryID: income.id, limit: Money(Decimal(100), currency: .eur))
+        let eur = try Currency(code: "EUR")
+        let budget = try Budget(name: "Invalid", categoryID: income.id, limit: Money(Decimal(100), currency: eur))
         XCTAssertThrowsError(try repository.save(budget)) { error in
             XCTAssertEqual(error as? RepositoryError, .budgetCategoryMustBeExpense(income.id))
         }

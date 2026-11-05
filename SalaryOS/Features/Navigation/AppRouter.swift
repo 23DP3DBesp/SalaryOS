@@ -12,6 +12,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
     case savings
     case loans
     case workTime
+    case calendar
 
     var id: String { rawValue }
 
@@ -26,6 +27,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
         case .savings: "navigation.savings"
         case .loans: "navigation.loans"
         case .workTime: "navigation.work-time"
+        case .calendar: "navigation.calendar"
         }
     }
 
@@ -40,12 +42,13 @@ enum AppRoute: String, CaseIterable, Identifiable {
         case .savings: "target"
         case .loans: "creditcard"
         case .workTime: "clock"
+        case .calendar: "calendar"
         }
     }
 }
 
 struct AppRouter: View {
-    let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & WorkTimeRepository
+    let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & WorkTimeRepository & ScheduledOperationRepository
     @State private var selectedRoute: AppRoute = .dashboard
     @State private var isAccountEditorPresented = false
     @State private var isTransactionEditorPresented = false
@@ -94,6 +97,10 @@ struct AppRouter: View {
             NavigationStack { WorkTimeView(repository: repository) }
                 .tabItem { Label(AppRoute.workTime.title, systemImage: AppRoute.workTime.symbol) }
                 .tag(AppRoute.workTime)
+
+            NavigationStack { CalendarView(repository: repository) }
+                .tabItem { Label(AppRoute.calendar.title, systemImage: AppRoute.calendar.symbol) }
+                .tag(AppRoute.calendar)
         }
         #else
         NavigationSplitView {
@@ -123,6 +130,8 @@ struct AppRouter: View {
                 LoansView(repository: repository)
             case .workTime:
                 WorkTimeView(repository: repository)
+            case .calendar:
+                CalendarView(repository: repository)
             }
         }
         #endif

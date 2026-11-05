@@ -21,6 +21,8 @@ public enum RepositoryError: Error, Equatable {
     case loanTermsConflict(UUID)
     case duplicateLoanRateDate(Date)
     case workEntryNotFound(UUID)
+    case scheduledOperationNotFound(UUID)
+    case scheduledOccurrenceAlreadyPosted(UUID, Date)
 }
 
 @MainActor
@@ -93,4 +95,13 @@ public protocol WorkTimeRepository: AnyObject {
     func entry(id: UUID) throws -> WorkEntry?
     func entries(from start: Date, through end: Date) throws -> [WorkEntry]
     func entries(overlapping start: Date, end: Date) throws -> [WorkEntry]
+}
+
+@MainActor
+public protocol ScheduledOperationRepository: AnyObject {
+    func save(_ operation: ScheduledOperation) throws
+    func operation(id: UUID) throws -> ScheduledOperation?
+    func operations(includeArchived: Bool) throws -> [ScheduledOperation]
+    func postedOccurrenceIDs() throws -> Set<String>
+    func postOccurrence(operationID: UUID, dueDate: Date, occurredAt: Date) throws -> LedgerPosting
 }

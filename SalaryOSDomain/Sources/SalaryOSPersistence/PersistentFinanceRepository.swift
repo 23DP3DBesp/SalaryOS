@@ -81,6 +81,7 @@ final class PersistedLedgerPosting {
     var descriptionText: String
     var notes: String?
     var relatedPostingID: UUID?
+    var scheduledOccurrenceID: String?
     var entriesData: Data
     var createdAt: Date
 
@@ -91,6 +92,7 @@ final class PersistedLedgerPosting {
         descriptionText = posting.description
         notes = posting.notes
         relatedPostingID = posting.relatedPostingID
+        scheduledOccurrenceID = posting.scheduledOccurrenceID
         self.entriesData = entriesData
         createdAt = posting.createdAt
     }
@@ -102,7 +104,8 @@ final class PersistedLedgerPosting {
         let entries = try JSONDecoder().decode([LedgerEntry].self, from: entriesData)
         return try LedgerPosting(
             id: id, kind: kind, occurredAt: occurredAt, description: descriptionText,
-            notes: notes, relatedPostingID: relatedPostingID, entries: entries, createdAt: createdAt
+            notes: notes, relatedPostingID: relatedPostingID,
+            scheduledOccurrenceID: scheduledOccurrenceID, entries: entries, createdAt: createdAt
         )
     }
 }
@@ -416,6 +419,55 @@ final class PersistedWorkEntry {
     }
 }
 
+@Model
+final class PersistedScheduledOperation {
+    var id: UUID
+    var name: String
+    var kindRawValue: String
+    var amount: Decimal
+    var currencyCode: String
+    var accountID: UUID
+    var categoryID: UUID
+    var recurrenceRawValue: String
+    var startDate: Date
+    var endDate: Date?
+    var notes: String?
+    var createdAt: Date
+    var updatedAt: Date
+    var isArchived: Bool
+
+    init(_ operation: ScheduledOperation) {
+        id = operation.id
+        name = operation.name
+        kindRawValue = operation.kind.rawValue
+        amount = operation.amount.amount
+        currencyCode = operation.amount.currency.code
+        accountID = operation.accountID
+        categoryID = operation.categoryID
+        recurrenceRawValue = operation.recurrence.rawValue
+        startDate = operation.startDate
+        endDate = operation.endDate
+        notes = operation.notes
+        createdAt = operation.createdAt
+        updatedAt = operation.updatedAt
+        isArchived = operation.isArchived
+    }
+
+    func domainValue() throws -> ScheduledOperation {
+        guard let kind = ScheduledOperationKind(rawValue: kindRawValue),
+              let recurrence = RecurrenceFrequency(rawValue: recurrenceRawValue) else {
+            throw PersistenceMappingError.invalidScheduledOperation(id)
+        }
+        return try ScheduledOperation(
+            id: id, name: name, kind: kind,
+            amount: Money(amount, currency: Currency(code: currencyCode)),
+            accountID: accountID, categoryID: categoryID, recurrence: recurrence,
+            startDate: startDate, endDate: endDate, notes: notes,
+            createdAt: createdAt, updatedAt: updatedAt, isArchived: isArchived
+        )
+    }
+}
+
 enum PersistenceMappingError: Error {
     case invalidAccountType(String)
     case invalidCategoryKind(String)
@@ -423,11 +475,12 @@ enum PersistenceMappingError: Error {
     case invalidBudgetPeriod(String)
     case invalidDebtDirection(String)
     case invalidLoanRateType(String)
+    case invalidScheduledOperation(UUID)
 }
 
 /// Keeps each posting and its entries in one persisted record so they are saved atomically.
 @MainActor
-final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository, DebtRepository, SavingsGoalRepository, LoanRepository, WorkTimeRepository {
+final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository, DebtRepository, SavingsGoalRepository, LoanRepository, WorkTimeRepository, ScheduledOperationRepository {
     private let context: ModelContext
     private let encoder = JSONEncoder()
 
@@ -621,6 +674,7 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
     func progress(for budget: Budget, on date: Date = .now, calendar: Calendar = .current) throws -> BudgetProgress {
         let interval = try BudgetCalendar.interval(for: budget.period, containing: date, calendar: calendar)
         let postings = try self.postings(from: interval.start, through: interval.end)
+            .filter { $0.occurredAt < interval.end }
         var spent = Decimal.zero
         for posting in postings {
             guard posting.kind == .expense || posting.kind == .refund else { continue }
@@ -898,6 +952,97 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
             .sorted { $0.startedAt > $1.startedAt }
     }
 
+    func save(_ operation: ScheduledOperation) throws {
+        let accountRecords = try context.fetch(FetchDescriptor<PersistedAccount>())
+        guard let accountRecord = accountRecords.first(where: { $0.id == operation.accountID }) else {
+            throw RepositoryError.accountNotFound(operation.accountID)
+        }
+        let account = try accountRecord.domainValue()
+        guard !account.isArchived, account.currency == operation.amount.currency else {
+            throw RepositoryError.invalidLedgerReference(operation.accountID)
+        }
+        let categoryRecords = try context.fetch(FetchDescriptor<PersistedCategory>())
+        guard let categoryRecord = categoryRecords.first(where: { $0.id == operation.categoryID }) else {
+            throw RepositoryError.categoryNotFound(operation.categoryID)
+        }
+        guard let categoryKind = CategoryKind(rawValue: categoryRecord.kindRawValue),
+              operation.kind == .income ? (categoryKind == .income || categoryKind == .salary) : (categoryKind == .expense) else {
+            throw RepositoryError.invalidLedgerReference(operation.categoryID)
+        }
+        let records = try context.fetch(FetchDescriptor<PersistedScheduledOperation>())
+        try ensureUniqueIDs(records)
+        if let existing = records.first(where: { $0.id == operation.id }) {
+            guard existing.kindRawValue == operation.kind.rawValue,
+                  existing.accountID == operation.accountID,
+                  existing.categoryID == operation.categoryID,
+                  existing.recurrenceRawValue == operation.recurrence.rawValue,
+                  existing.startDate == operation.startDate,
+                  existing.endDate == operation.endDate else {
+                throw RepositoryError.invalidLedgerReference(operation.id)
+            }
+            existing.name = operation.name
+            existing.amount = operation.amount.amount
+            existing.notes = operation.notes
+            existing.updatedAt = .now
+            existing.isArchived = operation.isArchived
+        } else {
+            context.insert(PersistedScheduledOperation(operation))
+        }
+        try commit()
+    }
+
+    func operation(id: UUID) throws -> ScheduledOperation? {
+        let records = try context.fetch(FetchDescriptor<PersistedScheduledOperation>())
+        try ensureUniqueIDs(records)
+        return try records.first(where: { $0.id == id })?.domainValue()
+    }
+
+    func operations(includeArchived: Bool = false) throws -> [ScheduledOperation] {
+        let records = try context.fetch(FetchDescriptor<PersistedScheduledOperation>())
+        try ensureUniqueIDs(records)
+        return try records.filter { includeArchived || !$0.isArchived }.map { try $0.domainValue() }
+    }
+
+    func postedOccurrenceIDs() throws -> Set<String> {
+        let records = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        try ensureUniqueIDs(records)
+        return Set(records.compactMap(\.scheduledOccurrenceID))
+    }
+
+    func postOccurrence(operationID: UUID, dueDate: Date, occurredAt: Date = .now) throws -> LedgerPosting {
+        guard let operation = try operation(id: operationID), !operation.isArchived else {
+            throw RepositoryError.scheduledOperationNotFound(operationID)
+        }
+        let occurrence = try RecurrenceCalendar.occurrences(for: operation, from: dueDate, through: dueDate, calendar: .current)
+            .first(where: { Calendar.current.isDate($0.dueDate, inSameDayAs: dueDate) })
+        guard let occurrence else { throw ScheduledOperationError.invalidCalendarDate }
+        let records = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        try ensureUniqueIDs(records)
+        guard !records.contains(where: { $0.scheduledOccurrenceID == occurrence.id }) else {
+            throw RepositoryError.scheduledOccurrenceAlreadyPosted(operationID, occurrence.dueDate)
+        }
+        guard let account = try account(id: operation.accountID),
+              let category = try category(id: operation.categoryID) else {
+            throw RepositoryError.invalidLedgerReference(operationID)
+        }
+        let posting = switch operation.kind {
+        case .income:
+            try LedgerFactory.income(amount: operation.amount, to: account, categoryID: category.id, description: operation.name, notes: operation.notes, occurredAt: occurredAt)
+        case .expense:
+            try LedgerFactory.expense(amount: operation.amount, from: account, categoryID: category.id, description: operation.name, notes: operation.notes, occurredAt: occurredAt)
+        }
+        let identifiedPosting = try LedgerPosting(
+            id: posting.id, kind: posting.kind, occurredAt: posting.occurredAt,
+            description: posting.description, notes: posting.notes,
+            relatedPostingID: posting.relatedPostingID, scheduledOccurrenceID: occurrence.id,
+            entries: posting.entries, createdAt: posting.createdAt
+        )
+        try validateReferences(in: identifiedPosting)
+        context.insert(PersistedLedgerPosting(identifiedPosting, entriesData: try encoder.encode(identifiedPosting.entries)))
+        try commit()
+        return identifiedPosting
+    }
+
 
     private func ensureUniqueIDs<Record: Identifiable>(_ records: [Record]) throws where Record.ID == UUID {
         var identifiers = Set<UUID>()
@@ -1015,10 +1160,10 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
 @MainActor
 public final class FinancePersistenceStack {
     public let modelContainer: ModelContainer
-    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & WorkTimeRepository
+    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & WorkTimeRepository & ScheduledOperationRepository
 
     public init(inMemory: Bool = false) throws {
-        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self, PersistedSavingsGoal.self, PersistedSavingsContribution.self, PersistedLoan.self, PersistedLoanRateChange.self, PersistedLoanExtraPayment.self, PersistedWorkEntry.self])
+        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self, PersistedSavingsGoal.self, PersistedSavingsContribution.self, PersistedLoan.self, PersistedLoanRateChange.self, PersistedLoanExtraPayment.self, PersistedWorkEntry.self, PersistedScheduledOperation.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         modelContainer = container
