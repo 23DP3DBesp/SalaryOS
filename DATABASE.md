@@ -50,6 +50,8 @@ Work-time summaries group shifts by employer and currency for the month in which
 
 Scheduled operations generate calendar occurrences from a stable first-date anchor. Monthly recurrence preserves the anchor day (clamping to the last valid day of shorter months); yearly recurrence handles leap-day anchors by clamping in non-leap years. Occurrences are previewed and posted only after an explicit user action. Their stable IDs are stored on ledger postings, so retrying a post cannot duplicate it even when the actual transaction date differs from the scheduled date. Editing amount/name leaves prior postings immutable; changing the recurrence definition is not supported in-place in this first version.
 
+Calendar reminders are opt-in local notifications at 9:00 AM on the scheduled date. The app refreshes the next 48 unposted reminders when the calendar opens or a schedule changes; authorization is controlled by the operating system. Reminders are device-local and are not synced between devices.
+
 ## Persistence limitations
 
 The current SwiftData schema has no CloudKit configuration and has not been migration-tested against a released database. Repository tests use an in-memory container; disk persistence, schema migration, sync, backup/restore, and conflict resolution remain later milestones. Corrupt or invalid serialized values are rejected by domain decoding and mapping instead of being trusted.

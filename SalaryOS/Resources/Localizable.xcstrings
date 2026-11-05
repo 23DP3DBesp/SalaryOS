@@ -6993,6 +6993,27 @@
         }
       }
     },
+    "calendar.enable-reminders": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Enable reminders" } },
+        "lv": { "stringUnit": { "state": "translated", "value": "Ieslēgt atgādinājumus" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Включить напоминания" } }
+      }
+    },
+    "calendar.disable-reminders": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Disable reminders" } },
+        "lv": { "stringUnit": { "state": "translated", "value": "Izslēgt atgādinājumus" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Выключить напоминания" } }
+      }
+    },
+    "calendar.reminders.permission-required": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Allow notifications for SalaryOS in system settings to receive reminders." } },
+        "lv": { "stringUnit": { "state": "translated", "value": "Atļaujiet SalaryOS paziņojumus sistēmas iestatījumos, lai saņemtu atgādinājumus." } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Разрешите уведомления SalaryOS в настройках системы, чтобы получать напоминания." } }
+      }
+    },
     "common.post": {
       "localizations": {
         "en": {

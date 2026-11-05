@@ -1,5 +1,6 @@
 import SalaryOSDomain
 import SwiftUI
+import UserNotifications
 
 struct CalendarView: View {
     let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & WorkTimeRepository & ScheduledOperationRepository
@@ -13,6 +14,8 @@ struct CalendarView: View {
     @State private var postingOccurrence: ScheduledOccurrence?
     @State private var actualDate = Date.now
     @State private var errorMessage: String?
+    @State private var reminderCoordinator = CalendarReminderCoordinator()
+    @AppStorage("calendar.reminders.enabled") private var remindersEnabled = false
 
     private var monthInterval: DateInterval {
         Calendar.current.dateInterval(of: .month, for: selectedMonth) ?? DateInterval(start: selectedMonth, duration: 31 * 86_400)
@@ -66,13 +69,23 @@ struct CalendarView: View {
         .navigationTitle("navigation.calendar")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("calendar.add-schedule", systemImage: "plus") { editorOperation = nil; isEditorPresented = true }
+                HStack {
+                    Button {
+                        toggleReminders()
+                    } label: {
+                        Image(systemName: remindersEnabled ? "bell.badge" : "bell.slash")
+                    }
+                    .accessibilityLabel(remindersEnabled ? "calendar.disable-reminders" : "calendar.enable-reminders")
+                    .help(remindersEnabled ? "calendar.disable-reminders" : "calendar.enable-reminders")
+
+                    Button("calendar.add-schedule", systemImage: "plus") { editorOperation = nil; isEditorPresented = true }
+                }
             }
         }
-        .sheet(isPresented: $isEditorPresented, onDismiss: reload) {
+        .sheet(isPresented: $isEditorPresented, onDismiss: calendarDidChange) {
             ScheduledOperationEditor(repository: repository, existingOperation: editorOperation)
         }
-        .sheet(item: $postingOccurrence, onDismiss: reload) { occurrence in
+        .sheet(item: $postingOccurrence, onDismiss: calendarDidChange) { occurrence in
             NavigationStack {
                 Form {
                     LabeledContent("calendar.scheduled-date", value: occurrence.dueDate.formatted(date: .long, time: .omitted))
@@ -86,7 +99,10 @@ struct CalendarView: View {
             }
             .frame(minWidth: 330, minHeight: 230)
         }
-        .task { reload() }
+        .task {
+            reload()
+            await refreshReminders()
+        }
         .onChange(of: selectedMonth) { _, _ in reload() }
         .alert("common.error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("common.ok", role: .cancel) { errorMessage = nil }
@@ -140,8 +156,49 @@ struct CalendarView: View {
         } catch { errorMessage = error.localizedDescription }
     }
 
+    private func calendarDidChange() {
+        reload()
+        Task { await refreshReminders() }
+    }
+
+    @MainActor
+    private func toggleReminders() {
+        Task {
+            if remindersEnabled {
+                remindersEnabled = false
+                await reminderCoordinator.cancelAll()
+                return
+            }
+            do {
+                guard try await reminderCoordinator.requestPermission() else {
+                    errorMessage = String(localized: "calendar.reminders.permission-required")
+                    return
+                }
+                remindersEnabled = true
+                await refreshReminders()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    @MainActor
+    private func refreshReminders() async {
+        guard remindersEnabled else { return }
+        do {
+            try await reminderCoordinator.refresh(operations: operations, postedIDs: postedIDs)
+            let settings = await UNUserNotificationCenter.current().notificationSettings()
+            if settings.authorizationStatus == .denied {
+                remindersEnabled = false
+                errorMessage = String(localized: "calendar.reminders.permission-required")
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     private func archive(_ operation: ScheduledOperation) {
-        do { var value = operation; value.setArchived(true); try repository.save(value); reload() }
+        do { var value = operation; value.setArchived(true); try repository.save(value); calendarDidChange() }
         catch { errorMessage = error.localizedDescription }
     }
 

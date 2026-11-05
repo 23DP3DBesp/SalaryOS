@@ -23,7 +23,7 @@
 ## Later phases
 
 - Phase 5 (in progress): category budgets are persisted and show current-period spending and remaining amount from real ledger data; weekly/monthly/yearly periods supported. Personal debt tracking supports payable/receivable obligations, due dates, notes, partial repayments, and payment history. Savings goals support targets, optional dates/accounts, immutable contributions, progress, and monthly targets. Loan tracking now supports fixed/variable rates, versioned rate changes, fees, amortization estimates, and extra-principal repayment recalculation. Posting debt, loan, and savings movements to the ledger remains.
-- Phase 6 (in progress): work-time entries support employer, shift interval, unpaid break, hourly rate, overlap validation, and monthly hours/gross estimates. Financial calendar now previews weekly/monthly/yearly income and expense occurrences and allows explicit, idempotent ledger posting. Notifications and richer recurrence editing remain.
+- Phase 6 (in progress): work-time entries support employer, shift interval, unpaid break, hourly rate, overlap validation, and monthly hours/gross estimates. Financial calendar previews weekly/monthly/yearly income and expense occurrences, supports explicit idempotent ledger posting, and offers opt-in local reminders for the next 48 unposted events. Device sync for reminders and richer recurrence editing remain.
 - Phase 7: backup, import/export, and CloudKit sync.
 - Phase 8: evaluated banking provider boundary and required backend work.
 - Phase 9: end-to-end quality, privacy, accessibility, and release documentation.
