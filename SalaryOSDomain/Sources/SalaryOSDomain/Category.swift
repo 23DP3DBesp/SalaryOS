@@ -1,10 +1,10 @@
 import Foundation
 
 public enum CategoryKind: String, Codable, CaseIterable, Sendable {
-    case income, expense
+    case income, salary, expense
 
     public var ledgerKind: LedgerAccountKind {
-        self == .income ? .income : .expense
+        self == .expense ? .expense : .income
     }
 }
 

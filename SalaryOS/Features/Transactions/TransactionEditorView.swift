@@ -3,19 +3,19 @@ import SalaryOSPersistence
 import SwiftUI
 
 private enum EntryTransactionKind: String, CaseIterable, Identifiable {
-    case income, expense, transfer, refund
+    case income, salary, expense, transfer, refund
 
     var id: String { rawValue }
     var domainKind: TransactionKind {
         switch self {
-        case .income: .income
+        case .income, .salary: .income
         case .expense: .expense
         case .transfer: .transfer
         case .refund: .refund
         }
     }
 
-    var localizedKey: LocalizedStringKey { domainKind.localizedKey }
+    var localizedKey: LocalizedStringKey { self == .salary ? "transaction-kind.salary" : domainKind.localizedKey }
 }
 
 struct TransactionEditorView: View {
@@ -24,6 +24,8 @@ struct TransactionEditorView: View {
     let repository: any AccountRepository & CategoryRepository & LedgerRepository
     let duplicate: LedgerPosting?
     let correcting: LedgerPosting?
+    let salaryOnly: Bool
+    let presetAmount: Decimal?
 
     private var sourcePosting: LedgerPosting? { correcting ?? duplicate }
 
@@ -45,17 +47,21 @@ struct TransactionEditorView: View {
     init(
         repository: any AccountRepository & CategoryRepository & LedgerRepository,
         duplicate: LedgerPosting? = nil,
-        correcting: LedgerPosting? = nil
+        correcting: LedgerPosting? = nil,
+        salaryOnly: Bool = false,
+        presetAmount: Decimal? = nil
     ) {
         self.repository = repository
         self.duplicate = duplicate
         self.correcting = correcting
+        self.salaryOnly = salaryOnly
+        self.presetAmount = presetAmount
         let source = correcting ?? duplicate
-        _entryKind = State(initialValue: Self.initialKind(for: source))
+        _entryKind = State(initialValue: salaryOnly ? .salary : Self.initialKind(for: source))
         _accountID = State(initialValue: Self.primaryAccountID(for: source))
         _destinationAccountID = State(initialValue: Self.destinationAccountID(for: source))
         _categoryID = State(initialValue: Self.categoryID(for: source))
-        _descriptionText = State(initialValue: source?.description ?? "")
+        _descriptionText = State(initialValue: source?.description ?? (salaryOnly ? String(localized: "salary.default-description") : ""))
         _notesText = State(initialValue: source?.notes ?? "")
         _occurredAt = State(initialValue: source?.occurredAt ?? .now)
     }
@@ -75,7 +81,9 @@ struct TransactionEditorView: View {
     private var availableCategories: [SalaryOSDomain.Category] {
         switch entryKind {
         case .income:
-            return categories.filter { $0.kind == .income }
+            return categories.filter { $0.kind == .income || $0.kind == .salary }
+        case .salary:
+            return categories.filter { $0.kind == .salary }
         case .expense:
             return categories.filter { $0.kind == .expense }
         case .transfer:
@@ -91,12 +99,16 @@ struct TransactionEditorView: View {
         NavigationStack {
             Form {
                 Section("transactions.section.operation") {
-                    Picker("transactions.field.type", selection: $entryKind) {
-                        ForEach(EntryTransactionKind.allCases.filter { correcting == nil || $0 != .refund }) { kind in
-                            Text(kind.localizedKey).tag(kind)
+                    if salaryOnly {
+                        LabeledContent("transactions.field.type") { Text(EntryTransactionKind.salary.localizedKey) }
+                    } else {
+                        Picker("transactions.field.type", selection: $entryKind) {
+                            ForEach(EntryTransactionKind.allCases.filter { correcting == nil || ($0 != .refund && $0 != .salary) }) { kind in
+                                Text(kind.localizedKey).tag(kind)
+                            }
                         }
+                        .onChange(of: entryKind) { _, _ in setDefaults() }
                     }
-                    .onChange(of: entryKind) { _, _ in setDefaults() }
 
                     if entryKind == .refund {
                         Picker("transactions.field.original-expense", selection: $originalPostingID) {
@@ -132,7 +144,7 @@ struct TransactionEditorView: View {
                                 Text(category.name).tag(category.id as UUID?)
                             }
                         }
-                        Button("transactions.category.add") { isCategoryEditorPresented = true }
+                        if !salaryOnly { Button("transactions.category.add") { isCategoryEditorPresented = true } }
                     }
                 }
 
@@ -172,6 +184,7 @@ struct TransactionEditorView: View {
         .frame(minWidth: 360, minHeight: 500)
         .task {
             load()
+            if let presetAmount { amountText = localizedAmount(presetAmount) }
             if let sourceAmount { amountText = localizedAmount(sourceAmount) }
         }
         .sheet(isPresented: $isCategoryEditorPresented) {
@@ -240,7 +253,12 @@ struct TransactionEditorView: View {
     }
 
     private var categoryKind: CategoryKind {
-        entryKind == .income ? .income : .expense
+        switch entryKind {
+        case .income: .income
+        case .salary: .salary
+        case .expense, .refund: .expense
+        case .transfer: .income
+        }
     }
 
     private var canSave: Bool {
@@ -289,7 +307,7 @@ struct TransactionEditorView: View {
             let notes = notesText.trimmingCharacters(in: .whitespacesAndNewlines)
             let posting: LedgerPosting
             switch entryKind {
-            case .income:
+            case .income, .salary:
                 guard let categoryID else { return }
                 posting = try LedgerFactory.income(amount: money, to: selectedAccount, categoryID: categoryID, description: description, notes: notes.nilIfBlank, occurredAt: occurredAt)
             case .expense:

@@ -280,7 +280,11 @@ private struct TransactionDetailView: View {
     }
 
     private func label(for entry: LedgerEntry) -> String {
-        accounts[entry.accountID]?.name ?? categories[entry.accountID]?.name ?? entry.accountID.uuidString
+        if let account = accounts[entry.accountID] { return account.name }
+        if let category = categories[entry.accountID] {
+            return category.kind == .salary ? String(localized: "transaction-kind.salary") : category.name
+        }
+        return entry.accountID.uuidString
     }
 }
 

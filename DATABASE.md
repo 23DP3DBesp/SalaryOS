@@ -3,7 +3,7 @@
 ## Current persisted records
 
 - **Account:** stable UUID, name, account type, ISO 4217 currency, signed opening balance, optional institution/details, timestamps, and archive state.
-- **Category:** stable UUID, name, income/expense kind, optional same-kind parent, archive state, and timestamps.
+- **Category:** stable UUID, name, income/salary/expense kind (salary categories post to income ledger accounts), optional same-kind parent, archive state, and timestamps.
 - **Ledger posting:** stable UUID, operation kind, occurrence and creation timestamps, description/notes, optional related posting, and the complete encoded entry list.
 
 Each posting and its entries are stored in one SwiftData record and saved together. Account/category/posting ID uniqueness checks happen in the repository; no CloudKit uniqueness constraint is used. Corrections preserve the original posting, append an exact side-swapped reversal, then append the corrected posting in one save. A failed correction adds neither record.
@@ -17,7 +17,7 @@ A debit increases the signed balance; a credit decreases it. That gives expected
 ## Ledger rules
 
 - Every posted operation has at least two positive entries and total debits equal total credits.
-- Income: debit an asset account, credit an income category.
+- Income and salary: debit an asset account, credit a matching income or salary category. Salary is tracked as its own category kind while remaining ordinary ledger income for balances and reporting.
 - Expense: debit an expense category, credit an asset or liability account.
 - Transfer: debit one personal account and credit another. It does not affect income or expense totals.
 - Refund: debit an asset or liability account and credit the original expense category. The repository requires a persisted original expense and prevents cumulative refunds from exceeding the original amount by category.

@@ -36,6 +36,34 @@ final class PersistentFinanceRepositoryTests: XCTestCase {
     }
 
     @MainActor
+    func testSalaryCategoryCanReceiveAndPersistVariableMonthlyIncome() throws {
+        let stack = try FinancePersistenceStack(inMemory: true)
+        let repository = stack.repository
+        let eur = try Currency(code: "EUR")
+        let account = try Account(name: "Bank", type: .current, currency: eur)
+        let salaryCategory = try Category(name: "Salary", kind: .salary)
+        try repository.save(account)
+        try repository.save(salaryCategory)
+
+        let firstPay = try LedgerFactory.income(
+            amount: Money(Decimal(string: "1450.25")!, currency: eur), to: account,
+            categoryID: salaryCategory.id, description: "September salary",
+            occurredAt: Date(timeIntervalSince1970: 1_758_787_200)
+        )
+        let secondPay = try LedgerFactory.income(
+            amount: Money(Decimal(string: "1822.80")!, currency: eur), to: account,
+            categoryID: salaryCategory.id, description: "October salary",
+            occurredAt: Date(timeIntervalSince1970: 1_760_515_200)
+        )
+        try repository.post(firstPay)
+        try repository.post(secondPay)
+
+        XCTAssertEqual(try repository.postings(from: nil, through: nil).count, 2)
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(string: "3273.05"))
+        XCTAssertEqual(try repository.categories(kind: .salary, includeArchived: false), [salaryCategory])
+    }
+
+    @MainActor
     func testRejectsDuplicatePostingAndMissingLedgerReferences() throws {
         let stack = try FinancePersistenceStack(inMemory: true)
         let repository = stack.repository

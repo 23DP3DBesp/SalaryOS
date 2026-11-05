@@ -56,7 +56,7 @@ struct AppRouter: View {
             .tabItem { Label(AppRoute.transactions.title, systemImage: AppRoute.transactions.symbol) }
             .tag(AppRoute.transactions)
 
-            NavigationStack { SalaryView() }
+            NavigationStack { SalaryView(repository: repository) }
                 .tabItem { Label(AppRoute.salary.title, systemImage: AppRoute.salary.symbol) }
                 .tag(AppRoute.salary)
         }
@@ -77,7 +77,7 @@ struct AppRouter: View {
             case .transactions:
                 TransactionsView(repository: repository, isEditorPresented: $isTransactionEditorPresented)
             case .salary:
-                SalaryView()
+                SalaryView(repository: repository)
             }
         }
         #endif

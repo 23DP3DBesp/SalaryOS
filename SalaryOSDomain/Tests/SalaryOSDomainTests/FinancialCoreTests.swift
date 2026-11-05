@@ -51,6 +51,17 @@ final class FinancialCoreTests: XCTestCase {
         XCTAssertEqual(expense.entries[1].accountKind, .asset)
     }
 
+    func testSalaryCategoryIsRecordedAsIncomeInTheLedger() throws {
+        let salaryCategory = try Category(name: "Salary", kind: .salary)
+        let bank = try account("Bank")
+        let posting = try LedgerFactory.income(
+            amount: money("1734.52"), to: bank, categoryID: salaryCategory.id,
+            description: "Variable monthly salary"
+        )
+        XCTAssertEqual(salaryCategory.kind.ledgerKind, .income)
+        XCTAssertEqual(posting.primaryAmount?.amount, Decimal(string: "1734.52"))
+    }
+
     func testTransferDoesNotUseIncomeOrExpenseAccounts() throws {
         let bank = try account("Bank")
         let wallet = try account("Wallet", type: .cash)

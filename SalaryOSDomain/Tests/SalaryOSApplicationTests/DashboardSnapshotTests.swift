@@ -14,7 +14,7 @@ final class DashboardSnapshotTests: XCTestCase {
         let bank = try Account(name: "Bank", type: .current, currency: eur, openingBalance: Money(Decimal(100), currency: eur))
         let cash = try Account(name: "Cash", type: .cash, currency: eur, openingBalance: Money(Decimal(20), currency: eur))
         let dollars = try Account(name: "Dollars", type: .savings, currency: usd, openingBalance: Money(Decimal(5), currency: usd))
-        let salary = try Category(name: "Salary", kind: .income)
+        let salary = try Category(name: "Salary", kind: .salary)
         let food = try Category(name: "Food", kind: .expense)
         for account in [bank, cash, dollars] { try repository.save(account) }
         try repository.save(salary)

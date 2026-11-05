@@ -312,8 +312,10 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
                 guard let category = categories.first(where: { $0.id == entry.accountID }) else {
                     throw RepositoryError.categoryNotFound(entry.accountID)
                 }
-                let expectedKind: CategoryKind = entry.accountKind == .income ? .income : .expense
-                guard category.kindRawValue == expectedKind.rawValue else {
+                let categoryKind = CategoryKind(rawValue: category.kindRawValue)
+                let validIncomeCategory = entry.accountKind == .income && (categoryKind == .income || categoryKind == .salary)
+                let validExpenseCategory = entry.accountKind == .expense && categoryKind == .expense
+                guard validIncomeCategory || validExpenseCategory else {
                     throw RepositoryError.invalidLedgerReference(entry.accountID)
                 }
                 guard !category.isArchived else { throw RepositoryError.archivedCategory(category.id) }

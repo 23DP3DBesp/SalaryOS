@@ -11,5 +11,8 @@ final class AppContainer {
         let persistenceStack = try FinancePersistenceStack()
         modelContainer = persistenceStack.modelContainer
         financeRepository = persistenceStack.repository
+        if try financeRepository.categories(kind: .salary, includeArchived: false).isEmpty {
+            try financeRepository.save(Category(name: "Salary", kind: .salary))
+        }
     }
 }
