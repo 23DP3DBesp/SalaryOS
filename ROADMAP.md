@@ -18,7 +18,7 @@
 
 ## Phase 4 — Salary and Latvian tax engine
 
-**In progress:** verified the 2026 Latvian standard employee rates against VID/FM; added the versioned `SalaryOSTax` module, a monthly gross-to-net and employer-cost calculator, an annual progressive PIT estimate, and the first salary screen. See [TAX_ENGINE.md](TAX_ENGINE.md) for rule sources and calculation boundaries. The salary experience now records actual variable monthly payments in a dedicated salary category and shows monthly history, year total, and average. Salary profiles, stored gross/tax breakdowns, other employment classes, and variable-pay annual reconciliation remain future work.
+**In progress:** verified the 2026 Latvian standard employee rates against VID/FM; added the versioned `SalaryOSTax` module, a monthly gross-to-net and employer-cost calculator, an annual progressive PIT estimate, and the salary screen. See [TAX_ENGINE.md](TAX_ENGINE.md) for rule sources and calculation boundaries. The salary experience records variable monthly take-home pay and keeps an active local payroll profile (name, tax booklet, dependents). Each saved payment stores its gross/tax breakdown with a linked net-income posting. The annual overview compares recorded withholding with an estimate for the 2026 saved salary records and excludes reversed payments. Remaining: multiple named/employer profiles, other employment classes, and reconciliation with other income, deductions, and declaration adjustments.
 
 ## Later phases
 

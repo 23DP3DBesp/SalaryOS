@@ -55,7 +55,7 @@ private enum AppTab: Hashable {
 }
 
 struct AppRouter: View {
-    let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & WorkTimeRepository & ScheduledOperationRepository
+    let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & SalaryRepository & WorkTimeRepository & ScheduledOperationRepository
     @State private var selectedRoute: AppRoute = .dashboard
     @State private var selectedTab: AppTab = .dashboard
     @State private var isAccountEditorPresented = false

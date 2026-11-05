@@ -53,6 +53,7 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
     public let savingsContributionID: UUID?
     public let loanExtraPaymentID: UUID?
     public let loanPaymentID: UUID?
+    public let salaryRecordID: UUID?
     public let entries: [LedgerEntry]
     public let createdAt: Date
 
@@ -68,6 +69,7 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
         savingsContributionID: UUID? = nil,
         loanExtraPaymentID: UUID? = nil,
         loanPaymentID: UUID? = nil,
+        salaryRecordID: UUID? = nil,
         entries: [LedgerEntry],
         createdAt: Date = .now
     ) throws {
@@ -97,6 +99,7 @@ public struct LedgerPosting: Identifiable, Hashable, Codable, Sendable {
         self.savingsContributionID = savingsContributionID
         self.loanExtraPaymentID = loanExtraPaymentID
         self.loanPaymentID = loanPaymentID
+        self.salaryRecordID = salaryRecordID
         self.entries = entries
         self.createdAt = createdAt
     }
@@ -154,6 +157,19 @@ public enum LedgerFactory {
             entries: [
                 LedgerEntry(accountID: account.id, accountKind: account.type.isLiability ? .liability : .asset, side: .debit, money: amount),
                 LedgerEntry(accountID: categoryID, accountKind: .income, side: .credit, money: amount)
+            ]
+        )
+    }
+
+    public static func recordedSalary(_ salary: SalaryRecord, to account: Account) throws -> LedgerPosting {
+        try validate(amount: salary.net, account: account)
+        guard !account.type.isLiability else { throw LedgerError.invalidAccountKinds(.income) }
+        return try LedgerPosting(
+            kind: .income, occurredAt: salary.occurredAt, description: salary.description,
+            salaryRecordID: salary.id,
+            entries: [
+                try LedgerEntry(accountID: account.id, accountKind: .asset, side: .debit, money: salary.net),
+                try LedgerEntry(accountID: salary.categoryID, accountKind: .income, side: .credit, money: salary.net)
             ]
         )
     }
@@ -337,7 +353,7 @@ extension LedgerEntry {
 
 extension LedgerPosting {
     private enum CodingKeys: String, CodingKey {
-        case id, kind, occurredAt, description, notes, relatedPostingID, scheduledOccurrenceID, debtPaymentID, savingsContributionID, loanExtraPaymentID, loanPaymentID, entries, createdAt
+        case id, kind, occurredAt, description, notes, relatedPostingID, scheduledOccurrenceID, debtPaymentID, savingsContributionID, loanExtraPaymentID, loanPaymentID, salaryRecordID, entries, createdAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -354,6 +370,7 @@ extension LedgerPosting {
             savingsContributionID: container.decodeIfPresent(UUID.self, forKey: .savingsContributionID),
             loanExtraPaymentID: container.decodeIfPresent(UUID.self, forKey: .loanExtraPaymentID),
             loanPaymentID: container.decodeIfPresent(UUID.self, forKey: .loanPaymentID),
+            salaryRecordID: container.decodeIfPresent(UUID.self, forKey: .salaryRecordID),
             entries: container.decode([LedgerEntry].self, forKey: .entries),
             createdAt: container.decode(Date.self, forKey: .createdAt)
         )

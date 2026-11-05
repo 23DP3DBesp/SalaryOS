@@ -86,6 +86,7 @@ final class PersistedLedgerPosting {
     var savingsContributionID: UUID?
     var loanExtraPaymentID: UUID?
     var loanPaymentID: UUID?
+    var salaryRecordID: UUID?
     var entriesData: Data
     var createdAt: Date
 
@@ -101,6 +102,7 @@ final class PersistedLedgerPosting {
         savingsContributionID = posting.savingsContributionID
         loanExtraPaymentID = posting.loanExtraPaymentID
         loanPaymentID = posting.loanPaymentID
+        salaryRecordID = posting.salaryRecordID
         self.entriesData = entriesData
         createdAt = posting.createdAt
     }
@@ -116,6 +118,7 @@ final class PersistedLedgerPosting {
             scheduledOccurrenceID: scheduledOccurrenceID, debtPaymentID: debtPaymentID,
             savingsContributionID: savingsContributionID, loanExtraPaymentID: loanExtraPaymentID,
             loanPaymentID: loanPaymentID,
+            salaryRecordID: salaryRecordID,
             entries: entries, createdAt: createdAt
         )
     }
@@ -426,6 +429,65 @@ final class PersistedLoanPayment {
 }
 
 @Model
+final class PersistedSalaryRecord {
+    var id: UUID
+    var taxYear: Int
+    var occurredAt: Date
+    var categoryID: UUID
+    var rulesID: String
+    var currencyCode: String
+    var gross: Decimal
+    var employeeSocialContribution: Decimal
+    var taxableBase: Decimal
+    var appliedAllowance: Decimal
+    var incomeTaxWithheld: Decimal
+    var net: Decimal
+    var employerSocialContribution: Decimal
+    var employerCost: Decimal
+    var taxBookletApplied: Bool
+    var dependentCount: Int
+    var profileName: String
+    var descriptionText: String
+    var createdAt: Date
+
+    init(_ value: SalaryRecord) {
+        id = value.id
+        taxYear = value.taxYear
+        occurredAt = value.occurredAt
+        categoryID = value.categoryID
+        rulesID = value.rulesID
+        currencyCode = value.gross.currency.code
+        gross = value.gross.amount
+        employeeSocialContribution = value.employeeSocialContribution.amount
+        taxableBase = value.taxableBase.amount
+        appliedAllowance = value.appliedAllowance.amount
+        incomeTaxWithheld = value.incomeTaxWithheld.amount
+        net = value.net.amount
+        employerSocialContribution = value.employerSocialContribution.amount
+        employerCost = value.employerCost.amount
+        taxBookletApplied = value.taxBookletApplied
+        dependentCount = value.dependentCount
+        profileName = value.profileName
+        descriptionText = value.description
+        createdAt = value.createdAt
+    }
+
+    func domainValue() throws -> SalaryRecord {
+        let currency = try Currency(code: currencyCode)
+        return try SalaryRecord(
+            id: id, taxYear: taxYear, occurredAt: occurredAt, categoryID: categoryID, rulesID: rulesID,
+            gross: Money(gross, currency: currency),
+            employeeSocialContribution: Money(employeeSocialContribution, currency: currency),
+            taxableBase: Money(taxableBase, currency: currency), appliedAllowance: Money(appliedAllowance, currency: currency),
+            incomeTaxWithheld: Money(incomeTaxWithheld, currency: currency), net: Money(net, currency: currency),
+            employerSocialContribution: Money(employerSocialContribution, currency: currency), employerCost: Money(employerCost, currency: currency),
+            taxBookletApplied: taxBookletApplied, dependentCount: dependentCount, profileName: profileName,
+            description: descriptionText, createdAt: createdAt
+        )
+    }
+}
+
+@Model
 final class PersistedWorkEntry {
     var id: UUID
     var employer: String
@@ -525,7 +587,7 @@ enum PersistenceMappingError: Error {
 
 /// Keeps each posting and its entries in one persisted record so they are saved atomically.
 @MainActor
-final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository, DebtRepository, SavingsGoalRepository, LoanRepository, WorkTimeRepository, ScheduledOperationRepository {
+final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository, DebtRepository, SavingsGoalRepository, LoanRepository, SalaryRepository, WorkTimeRepository, ScheduledOperationRepository {
     private let context: ModelContext
     private let encoder = JSONEncoder()
 
@@ -675,6 +737,21 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
             }
             guard !existing.contains(where: { $0.loanPaymentID == paymentID }) else {
                 throw RepositoryError.duplicateIdentifier(paymentID)
+            }
+        }
+        if let salaryID = posting.salaryRecordID {
+            let salaries = try context.fetch(FetchDescriptor<PersistedSalaryRecord>())
+            guard let stored = salaries.first(where: { $0.id == salaryID }) else {
+                throw RepositoryError.invalidLedgerReference(salaryID)
+            }
+            let salary = try stored.domainValue()
+            guard posting.kind == .income, posting.occurredAt == salary.occurredAt,
+                  posting.entries.contains(where: { $0.accountID == salary.categoryID && $0.accountKind == .income && $0.side == .credit && $0.money == salary.net }),
+                  posting.entries.contains(where: { $0.accountKind == .asset && $0.side == .debit && $0.money == salary.net }) else {
+                throw RepositoryError.invalidLedgerReference(salary.categoryID)
+            }
+            guard !existing.contains(where: { $0.salaryRecordID == salaryID }) else {
+                throw RepositoryError.duplicateIdentifier(salaryID)
             }
         }
         try validateReferences(in: posting)
@@ -1132,6 +1209,40 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         return try activeLoanPayments(from: records, loan: loan).sorted { $0.installmentNumber < $1.installmentNumber }
     }
 
+    func record(_ salary: SalaryRecord, to accountID: UUID) throws -> LedgerPosting {
+        guard try !context.fetch(FetchDescriptor<PersistedSalaryRecord>()).contains(where: { $0.id == salary.id }) else {
+            throw RepositoryError.duplicateIdentifier(salary.id)
+        }
+        guard let account = try account(id: accountID) else { throw RepositoryError.accountNotFound(accountID) }
+        guard !account.isArchived else { throw RepositoryError.archivedAccount(account.id) }
+        guard let category = try category(id: salary.categoryID) else { throw RepositoryError.categoryNotFound(salary.categoryID) }
+        guard !category.isArchived, (category.kind == .salary || category.kind == .income) else {
+            throw RepositoryError.invalidLedgerReference(salary.categoryID)
+        }
+        let posting = try LedgerFactory.recordedSalary(salary, to: account)
+        try validateReferences(in: posting)
+        context.insert(PersistedSalaryRecord(salary))
+        context.insert(PersistedLedgerPosting(posting, entriesData: try encoder.encode(posting.entries)))
+        try commit()
+        return posting
+    }
+
+    func salaryRecords(for taxYear: Int) throws -> [SalaryRecord] {
+        let records = try context.fetch(FetchDescriptor<PersistedSalaryRecord>())
+        try ensureUniqueIDs(records)
+        let postings = try context.fetch(FetchDescriptor<PersistedLedgerPosting>())
+        let reversedPostingIDs = Set(postings
+            .filter { $0.kindRawValue == TransactionKind.reversal.rawValue }
+            .compactMap(\.relatedPostingID))
+        let reversedSalaryIDs = Set(postings
+            .filter { reversedPostingIDs.contains($0.id) }
+            .compactMap(\.salaryRecordID))
+        return try records
+            .filter { $0.taxYear == taxYear && !reversedSalaryIDs.contains($0.id) }
+            .map { try $0.domainValue() }
+            .sorted { $0.occurredAt > $1.occurredAt }
+    }
+
     func extraPayments(for loanID: UUID) throws -> [LoanExtraPayment] {
         guard let loan = try loan(id: loanID) else { throw RepositoryError.loanNotFound(loanID) }
         let records = try context.fetch(FetchDescriptor<PersistedLoanExtraPayment>())
@@ -1474,10 +1585,10 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
 @MainActor
 public final class FinancePersistenceStack {
     public let modelContainer: ModelContainer
-    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & WorkTimeRepository & ScheduledOperationRepository
+    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository & LoanRepository & SalaryRepository & WorkTimeRepository & ScheduledOperationRepository
 
     public init(inMemory: Bool = false) throws {
-        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self, PersistedSavingsGoal.self, PersistedSavingsContribution.self, PersistedLoan.self, PersistedLoanRateChange.self, PersistedLoanExtraPayment.self, PersistedLoanPayment.self, PersistedWorkEntry.self, PersistedScheduledOperation.self])
+        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self, PersistedSavingsGoal.self, PersistedSavingsContribution.self, PersistedLoan.self, PersistedLoanRateChange.self, PersistedLoanExtraPayment.self, PersistedLoanPayment.self, PersistedSalaryRecord.self, PersistedWorkEntry.self, PersistedScheduledOperation.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         modelContainer = container

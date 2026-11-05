@@ -284,6 +284,36 @@ final class PersistentFinanceRepositoryTests: XCTestCase {
     }
 
     @MainActor
+    func testSalaryBreakdownPersistsWithNetPayAndReversalRemovesAnnualRecord() throws {
+        let repository = try FinancePersistenceStack(inMemory: true).repository
+        let eur = try Currency(code: "EUR")
+        let account = try Account(name: "Bank", type: .current, currency: eur, openingBalance: Money(Decimal(100), currency: eur))
+        let salaryCategory = try Category(name: "Salary", kind: .salary)
+        try repository.save(account)
+        try repository.save(salaryCategory)
+        let paidAt = ISO8601DateFormatter().date(from: "2026-03-31T12:00:00Z")!
+        let record = try SalaryRecord(
+            taxYear: 2026, occurredAt: paidAt, categoryID: salaryCategory.id, rulesID: "LV-2026-v1",
+            gross: Money(Decimal(1_000), currency: eur),
+            employeeSocialContribution: Money(Decimal(105), currency: eur),
+            taxableBase: Money(Decimal(345), currency: eur), appliedAllowance: Money(Decimal(550), currency: eur),
+            incomeTaxWithheld: Money(Decimal(87), currency: eur), net: Money(Decimal(808), currency: eur),
+            employerSocialContribution: Money(Decimal(string: "235.90")!, currency: eur), employerCost: Money(Decimal(string: "1235.90")!, currency: eur),
+            taxBookletApplied: true, dependentCount: 0, description: "March salary"
+        )
+
+        let posting = try repository.record(record, to: account.id)
+        XCTAssertEqual(posting.salaryRecordID, record.id)
+        XCTAssertEqual(posting.primaryAmount?.amount, Decimal(808))
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(908))
+        XCTAssertEqual(try repository.salaryRecords(for: 2026), [record])
+
+        _ = try repository.reverse(postingID: posting.id, description: "Undo salary", occurredAt: .now)
+        XCTAssertEqual(try repository.balance(for: account).amount, Decimal(100))
+        XCTAssertTrue(try repository.salaryRecords(for: 2026).isEmpty)
+    }
+
+    @MainActor
     func testRejectsDuplicatePostingAndMissingLedgerReferences() throws {
         let stack = try FinancePersistenceStack(inMemory: true)
         let repository = stack.repository

@@ -97,6 +97,12 @@ public protocol LoanRepository: AnyObject {
 }
 
 @MainActor
+public protocol SalaryRepository: AnyObject {
+    func record(_ salary: SalaryRecord, to accountID: UUID) throws -> LedgerPosting
+    func salaryRecords(for taxYear: Int) throws -> [SalaryRecord]
+}
+
+@MainActor
 public protocol WorkTimeRepository: AnyObject {
     func save(_ entry: WorkEntry) throws
     func entry(id: UUID) throws -> WorkEntry?
