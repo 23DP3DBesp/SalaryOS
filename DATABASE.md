@@ -8,6 +8,8 @@
 - **Budget:** stable UUID, name, expense category, positive limit, ISO currency, calendar period (week/month/year), timestamps, and archive state. Budgets are stored separately from ledger entries and never alter balances.
 - **Personal debt:** stable UUID, description, counterparty, direction (payable/receivable), immutable principal/currency, optional due date and notes, timestamps, and archive state.
 - **Debt payment:** immutable UUID, debt reference, positive amount in the debt currency, payment date, optional note, and creation timestamp. Partial payments remain individually available as history.
+- **Savings goal:** stable UUID, name, immutable currency, target, optional target date/account, notes, timestamps, and archive state.
+- **Savings contribution:** immutable UUID, goal reference, positive amount in the goal currency, contribution date, optional note, and creation timestamp.
 
 Each posting and its entries are stored in one SwiftData record and saved together. Account/category/posting ID uniqueness checks happen in the repository; no CloudKit uniqueness constraint is used. Corrections preserve the original posting, append an exact side-swapped reversal, then append the corrected posting in one save. A failed correction adds neither record.
 
@@ -34,6 +36,8 @@ Archived accounts/categories remain available to historical postings but cannot 
 Budgets can only reference expense categories. Their progress is calculated from persisted expense/refund postings in the selected calendar interval; refunds reduce spending. A budget's category, period, and currency are immutable after creation. The current budget UI creates weekly, monthly, and yearly category budgets; account-specific/custom-period limits and projections are not implemented yet.
 
 Personal debt outstanding is derived from the immutable principal minus its persisted payment records. The repository rejects duplicate payment IDs, missing debts, cross-currency payments, and payments exceeding the outstanding amount. Debt payment history is currently a separate tracking record; it is not yet posted to the financial ledger or linked to a selected account, so users must also record the corresponding cash movement as a transaction.
+
+Savings progress is derived from all saved contributions and the configured target. The displayed progress bar caps at 100%, while the saved total retains any amount above the target. An optional linked account is validated for existence and matching currency; contributions remain goal allocations and do not change the account ledger balance. This keeps the distinction between earmarking funds and moving funds explicit.
 
 ## Persistence limitations
 

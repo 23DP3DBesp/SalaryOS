@@ -22,7 +22,7 @@
 
 ## Later phases
 
-- Phase 5 (in progress): category budgets are persisted and show current-period spending and remaining amount from real ledger data; weekly/monthly/yearly periods supported. Personal debt tracking supports payable/receivable obligations, due dates, notes, partial repayments, and payment history. Debt repayment to ledger accounts, loans, and savings goals remain.
+- Phase 5 (in progress): category budgets are persisted and show current-period spending and remaining amount from real ledger data; weekly/monthly/yearly periods supported. Personal debt tracking supports payable/receivable obligations, due dates, notes, partial repayments, and payment history. Savings goals support targets, optional dates/accounts, immutable contributions, progress, and monthly targets. Linking debt repayments and savings contributions to ledger account movements, plus loan management, remain.
 - Phase 6: work time, recurring operations, calendar, and notifications.
 - Phase 7: backup, import/export, and CloudKit sync.
 - Phase 8: evaluated banking provider boundary and required backend work.

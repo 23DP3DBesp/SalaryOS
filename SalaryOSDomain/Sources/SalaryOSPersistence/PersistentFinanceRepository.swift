@@ -213,6 +213,71 @@ final class PersistedDebtPayment {
     }
 }
 
+@Model
+final class PersistedSavingsGoal {
+    var id: UUID
+    var name: String
+    var currencyCode: String
+    var targetAmount: Decimal
+    var targetDate: Date?
+    var linkedAccountID: UUID?
+    var notes: String?
+    var createdAt: Date
+    var updatedAt: Date
+    var isArchived: Bool
+
+    init(_ goal: SavingsGoal) {
+        id = goal.id
+        name = goal.name
+        currencyCode = goal.currency.code
+        targetAmount = goal.target.amount
+        targetDate = goal.targetDate
+        linkedAccountID = goal.linkedAccountID
+        notes = goal.notes
+        createdAt = goal.createdAt
+        updatedAt = goal.updatedAt
+        isArchived = goal.isArchived
+    }
+
+    func domainValue() throws -> SavingsGoal {
+        try SavingsGoal(
+            id: id, name: name,
+            target: Money(targetAmount, currency: Currency(code: currencyCode)),
+            targetDate: targetDate, linkedAccountID: linkedAccountID, notes: notes,
+            createdAt: createdAt, updatedAt: updatedAt, isArchived: isArchived
+        )
+    }
+}
+
+@Model
+final class PersistedSavingsContribution {
+    var id: UUID
+    var goalID: UUID
+    var currencyCode: String
+    var amount: Decimal
+    var contributedAt: Date
+    var note: String?
+    var createdAt: Date
+
+    init(_ contribution: SavingsContribution) {
+        id = contribution.id
+        goalID = contribution.goalID
+        currencyCode = contribution.amount.currency.code
+        amount = contribution.amount.amount
+        contributedAt = contribution.contributedAt
+        note = contribution.note
+        createdAt = contribution.createdAt
+    }
+
+    func domainValue() throws -> SavingsContribution {
+        try SavingsContribution(
+            id: id, goalID: goalID,
+            amount: Money(amount, currency: Currency(code: currencyCode)),
+            contributedAt: contributedAt, note: note, createdAt: createdAt
+        )
+    }
+}
+
 enum PersistenceMappingError: Error {
     case invalidAccountType(String)
     case invalidCategoryKind(String)
@@ -223,7 +288,7 @@ enum PersistenceMappingError: Error {
 
 /// Keeps each posting and its entries in one persisted record so they are saved atomically.
 @MainActor
-final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository, DebtRepository {
+final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository, DebtRepository, SavingsGoalRepository {
     private let context: ModelContext
     private let encoder = JSONEncoder()
 
@@ -498,6 +563,81 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         return try DebtSummary(debt: debt, payments: payments(for: debtID))
     }
 
+    func save(_ goal: SavingsGoal) throws {
+        let goalRecords = try context.fetch(FetchDescriptor<PersistedSavingsGoal>())
+        try ensureUniqueIDs(goalRecords)
+        if let accountID = goal.linkedAccountID {
+            let accountRecords = try context.fetch(FetchDescriptor<PersistedAccount>())
+            guard let accountRecord = accountRecords.first(where: { $0.id == accountID }) else {
+                throw RepositoryError.accountNotFound(accountID)
+            }
+            let account = try accountRecord.domainValue()
+            guard account.currency == goal.currency else {
+                throw MoneyError.currencyMismatch(expected: account.currency.code, actual: goal.currency.code)
+            }
+        }
+        let oldContributionRecords = try context.fetch(FetchDescriptor<PersistedSavingsContribution>()).filter { $0.goalID == goal.id }
+        let oldContributions = try oldContributionRecords.map { try $0.domainValue() }
+        _ = try SavingsGoalProgress(goal: goal, contributions: oldContributions)
+        if let existing = goalRecords.first(where: { $0.id == goal.id }) {
+            guard existing.currencyCode == goal.currency.code,
+                  existing.createdAt == goal.createdAt,
+                  existing.linkedAccountID == goal.linkedAccountID else {
+                throw RepositoryError.invalidLedgerReference(goal.id)
+            }
+            existing.name = goal.name
+            existing.targetAmount = goal.target.amount
+            existing.notes = goal.notes
+            existing.updatedAt = .now
+            existing.isArchived = goal.isArchived
+        } else {
+            context.insert(PersistedSavingsGoal(goal))
+        }
+        try commit()
+    }
+
+    func goal(id: UUID) throws -> SavingsGoal? {
+        let records = try context.fetch(FetchDescriptor<PersistedSavingsGoal>())
+        try ensureUniqueIDs(records)
+        return try records.first(where: { $0.id == id })?.domainValue()
+    }
+
+    func goals(includeArchived: Bool = false) throws -> [SavingsGoal] {
+        let records = try context.fetch(FetchDescriptor<PersistedSavingsGoal>())
+        try ensureUniqueIDs(records)
+        return try records.filter { includeArchived || !$0.isArchived }.map { try $0.domainValue() }
+    }
+
+    func record(_ contribution: SavingsContribution) throws {
+        let goalRecords = try context.fetch(FetchDescriptor<PersistedSavingsGoal>())
+        try ensureUniqueIDs(goalRecords)
+        guard let record = goalRecords.first(where: { $0.id == contribution.goalID }) else {
+            throw RepositoryError.savingsGoalNotFound(contribution.goalID)
+        }
+        let contributionRecords = try context.fetch(FetchDescriptor<PersistedSavingsContribution>())
+        try ensureUniqueIDs(contributionRecords)
+        guard !contributionRecords.contains(where: { $0.id == contribution.id }) else {
+            throw RepositoryError.duplicateIdentifier(contribution.id)
+        }
+        let goal = try record.domainValue()
+        guard !goal.isArchived else { throw RepositoryError.invalidLedgerReference(goal.id) }
+        let values = try contributionRecords.filter { $0.goalID == goal.id }.map { try $0.domainValue() } + [contribution]
+        _ = try SavingsGoalProgress(goal: goal, contributions: values)
+        context.insert(PersistedSavingsContribution(contribution))
+        try commit()
+    }
+
+    func contributions(for goalID: UUID) throws -> [SavingsContribution] {
+        let records = try context.fetch(FetchDescriptor<PersistedSavingsContribution>())
+        try ensureUniqueIDs(records)
+        return try records.filter { $0.goalID == goalID }.map { try $0.domainValue() }.sorted { $0.contributedAt > $1.contributedAt }
+    }
+
+    func progress(for goalID: UUID, asOf date: Date = .now, calendar: Calendar = .current) throws -> SavingsGoalProgress {
+        guard let goal = try goal(id: goalID) else { throw RepositoryError.savingsGoalNotFound(goalID) }
+        return try SavingsGoalProgress(goal: goal, contributions: contributions(for: goalID), asOf: date, calendar: calendar)
+    }
+
 
     private func ensureUniqueIDs<Record: Identifiable>(_ records: [Record]) throws where Record.ID == UUID {
         var identifiers = Set<UUID>()
@@ -615,10 +755,10 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
 @MainActor
 public final class FinancePersistenceStack {
     public let modelContainer: ModelContainer
-    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository
+    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository
 
     public init(inMemory: Bool = false) throws {
-        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self])
+        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self, PersistedDebt.self, PersistedDebtPayment.self, PersistedSavingsGoal.self, PersistedSavingsContribution.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         modelContainer = container

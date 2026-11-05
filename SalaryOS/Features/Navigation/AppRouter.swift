@@ -9,6 +9,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
     case salary
     case budgets
     case debts
+    case savings
 
     var id: String { rawValue }
 
@@ -20,6 +21,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
         case .salary: "navigation.salary"
         case .budgets: "navigation.budgets"
         case .debts: "navigation.debts"
+        case .savings: "navigation.savings"
         }
     }
 
@@ -31,12 +33,13 @@ enum AppRoute: String, CaseIterable, Identifiable {
         case .salary: "eurosign.circle"
         case .budgets: "chart.bar.xaxis"
         case .debts: "person.text.rectangle"
+        case .savings: "target"
         }
     }
 }
 
 struct AppRouter: View {
-    let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository
+    let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository & DebtRepository & SavingsGoalRepository
     @State private var selectedRoute: AppRoute = .dashboard
     @State private var isAccountEditorPresented = false
     @State private var isTransactionEditorPresented = false
@@ -73,6 +76,10 @@ struct AppRouter: View {
             NavigationStack { DebtsView(repository: repository) }
                 .tabItem { Label(AppRoute.debts.title, systemImage: AppRoute.debts.symbol) }
                 .tag(AppRoute.debts)
+
+            NavigationStack { SavingsGoalsView(repository: repository) }
+                .tabItem { Label(AppRoute.savings.title, systemImage: AppRoute.savings.symbol) }
+                .tag(AppRoute.savings)
         }
         #else
         NavigationSplitView {
@@ -96,6 +103,8 @@ struct AppRouter: View {
                 BudgetsView(repository: repository)
             case .debts:
                 DebtsView(repository: repository)
+            case .savings:
+                SavingsGoalsView(repository: repository)
             }
         }
         #endif
