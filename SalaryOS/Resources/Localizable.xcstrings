@@ -7014,6 +7014,13 @@
         "ru": { "stringUnit": { "state": "translated", "value": "Разрешите уведомления SalaryOS в настройках системы, чтобы получать напоминания." } }
       }
     },
+    "calendar.edit-future-only": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Changes update future calendar events. Posted transactions stay unchanged." } },
+        "lv": { "stringUnit": { "state": "translated", "value": "Izmaiņas attiecas uz turpmākajiem kalendāra notikumiem. Iegrāmatotie darījumi nemainās." } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Изменения применяются к будущим событиям. Проведённые операции не меняются." } }
+      }
+    },
     "common.post": {
       "localizations": {
         "en": {

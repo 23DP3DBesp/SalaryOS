@@ -33,6 +33,20 @@ final class PersistentFinanceRepositoryTests: XCTestCase {
         XCTAssertEqual(posting.scheduledOccurrenceID, occurrences[0].id)
         XCTAssertThrowsError(try repository.postOccurrence(operationID: operation.id, dueDate: occurrences[0].dueDate, occurredAt: occurrences[0].dueDate))
         XCTAssertEqual(try repository.postings(from: nil, through: nil).count, 1)
+
+        var edited = try XCTUnwrap(repository.operation(id: operation.id))
+        let nextAnchor = ISO8601DateFormatter().date(from: "2026-04-30T00:00:00Z")!
+        try edited.update(
+            name: "Updated rent", kind: .expense, amount: Money(Decimal(700), currency: eur),
+            accountID: account.id, categoryID: category.id, recurrence: .monthly,
+            startDate: nextAnchor, endDate: nil, notes: "New terms"
+        )
+        try repository.save(edited)
+        let savedEdit = try XCTUnwrap(repository.operation(id: operation.id))
+        XCTAssertEqual(savedEdit.name, "Updated rent")
+        XCTAssertEqual(savedEdit.amount.amount, Decimal(700))
+        XCTAssertEqual(savedEdit.startDate, nextAnchor)
+        XCTAssertEqual(try repository.posting(id: posting.id)?.description, "Rent")
     }
 
     @MainActor

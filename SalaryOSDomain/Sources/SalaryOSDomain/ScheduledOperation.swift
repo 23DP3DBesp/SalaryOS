@@ -22,13 +22,13 @@ public enum ScheduledOperationError: Error, Equatable {
 public struct ScheduledOperation: Identifiable, Hashable, Codable, Sendable {
     public let id: UUID
     public private(set) var name: String
-    public let kind: ScheduledOperationKind
+    public private(set) var kind: ScheduledOperationKind
     public private(set) var amount: Money
-    public let accountID: UUID
-    public let categoryID: UUID
-    public let recurrence: RecurrenceFrequency
-    public let startDate: Date
-    public let endDate: Date?
+    public private(set) var accountID: UUID
+    public private(set) var categoryID: UUID
+    public private(set) var recurrence: RecurrenceFrequency
+    public private(set) var startDate: Date
+    public private(set) var endDate: Date?
     public private(set) var notes: String?
     public let createdAt: Date
     public private(set) var updatedAt: Date
@@ -59,13 +59,23 @@ public struct ScheduledOperation: Identifiable, Hashable, Codable, Sendable {
         self.isArchived = isArchived
     }
 
-    public mutating func update(name: String, amount: Money, notes: String?) throws {
+    public mutating func update(
+        name: String, kind: ScheduledOperationKind, amount: Money,
+        accountID: UUID, categoryID: UUID, recurrence: RecurrenceFrequency,
+        startDate: Date, endDate: Date?, notes: String?
+    ) throws {
         let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { throw ScheduledOperationError.emptyName }
         guard amount.amount > .zero else { throw ScheduledOperationError.invalidAmount }
-        guard amount.currency == self.amount.currency else { throw ScheduledOperationError.currencyMismatch }
+        if let endDate, endDate < startDate { throw ScheduledOperationError.invalidDateRange }
         self.name = cleaned
+        self.kind = kind
         self.amount = amount
+        self.accountID = accountID
+        self.categoryID = categoryID
+        self.recurrence = recurrence
+        self.startDate = startDate
+        self.endDate = endDate
         self.notes = notes?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         updatedAt = .now
     }

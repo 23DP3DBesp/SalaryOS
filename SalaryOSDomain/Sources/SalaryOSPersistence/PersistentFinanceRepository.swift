@@ -972,16 +972,15 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         let records = try context.fetch(FetchDescriptor<PersistedScheduledOperation>())
         try ensureUniqueIDs(records)
         if let existing = records.first(where: { $0.id == operation.id }) {
-            guard existing.kindRawValue == operation.kind.rawValue,
-                  existing.accountID == operation.accountID,
-                  existing.categoryID == operation.categoryID,
-                  existing.recurrenceRawValue == operation.recurrence.rawValue,
-                  existing.startDate == operation.startDate,
-                  existing.endDate == operation.endDate else {
-                throw RepositoryError.invalidLedgerReference(operation.id)
-            }
             existing.name = operation.name
+            existing.kindRawValue = operation.kind.rawValue
             existing.amount = operation.amount.amount
+            existing.currencyCode = operation.amount.currency.code
+            existing.accountID = operation.accountID
+            existing.categoryID = operation.categoryID
+            existing.recurrenceRawValue = operation.recurrence.rawValue
+            existing.startDate = operation.startDate
+            existing.endDate = operation.endDate
             existing.notes = operation.notes
             existing.updatedAt = .now
             existing.isArchived = operation.isArchived

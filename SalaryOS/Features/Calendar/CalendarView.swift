@@ -223,6 +223,7 @@ private struct ScheduledOperationEditor: View {
     @State private var categoryID: UUID?
     @State private var recurrence: RecurrenceFrequency = .monthly
     @State private var startDate = Date.now
+    @State private var initialEditableStartDate = Date.now
     @State private var hasEndDate = false
     @State private var endDate = Calendar.current.date(byAdding: .year, value: 1, to: .now) ?? .now
     @State private var notes = ""
@@ -243,33 +244,35 @@ private struct ScheduledOperationEditor: View {
                     Text("calendar.income").tag(ScheduledOperationKind.income)
                     Text("calendar.expense").tag(ScheduledOperationKind.expense)
                 }
-                .disabled(existingOperation != nil)
                 HStack {
                     TextField("calendar.amount", text: $amount)
 #if os(iOS)
                         .keyboardType(.decimalPad)
 #endif
-                    TextField("calendar.currency", text: $currencyCode).frame(maxWidth: 70).disabled(existingOperation != nil)
+                    TextField("calendar.currency", text: $currencyCode).frame(maxWidth: 70)
                 }
-                .disabled(existingOperation != nil)
                 Picker("transactions.field.account", selection: $accountID) {
                     Text("transactions.field.choose-account").tag(UUID?.none)
                     ForEach(compatibleAccounts) { account in Text(account.name).tag(Optional(account.id)) }
                 }
-                .disabled(existingOperation != nil)
                 Picker("transactions.field.category", selection: $categoryID) {
                     Text("transactions.field.choose-category").tag(UUID?.none)
                     ForEach(availableCategories) { category in Text(category.name).tag(Optional(category.id)) }
                 }
-                .disabled(existingOperation != nil)
                 Picker("calendar.frequency", selection: $recurrence) {
                     ForEach(RecurrenceFrequency.allCases, id: \.self) { item in Text(item.localizedName).tag(item) }
                 }
-                .disabled(existingOperation != nil)
-                DatePicker("calendar.starts", selection: $startDate, displayedComponents: .date).disabled(existingOperation != nil)
-                Toggle("calendar.has-end-date", isOn: $hasEndDate).disabled(existingOperation != nil)
-                if hasEndDate { DatePicker("calendar.ends", selection: $endDate, displayedComponents: .date).disabled(existingOperation != nil) }
+                DatePicker("calendar.starts", selection: $startDate, in: Calendar.current.startOfDay(for: .now)..., displayedComponents: .date)
+                Toggle("calendar.has-end-date", isOn: $hasEndDate)
+                if hasEndDate {
+                    DatePicker("calendar.ends", selection: $endDate, displayedComponents: .date)
+                }
                 TextField("calendar.notes", text: $notes, axis: .vertical).lineLimit(2...5)
+                if existingOperation != nil {
+                    Text("calendar.edit-future-only")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             .navigationTitle(existingOperation == nil ? "calendar.add-schedule" : "calendar.edit-schedule")
             .toolbar {
@@ -303,7 +306,10 @@ private struct ScheduledOperationEditor: View {
             accountID = existingOperation.accountID
             categoryID = existingOperation.categoryID
             recurrence = existingOperation.recurrence
-            startDate = existingOperation.startDate
+            let today = Calendar.current.startOfDay(for: .now)
+            let horizon = Calendar.current.date(byAdding: .year, value: 2, to: today) ?? today
+            startDate = (try? RecurrenceCalendar.occurrences(for: existingOperation, from: today, through: horizon))?.first?.dueDate ?? today
+            initialEditableStartDate = startDate
             if let end = existingOperation.endDate { hasEndDate = true; endDate = end }
             notes = existingOperation.notes ?? ""
         } else {
@@ -318,7 +324,21 @@ private struct ScheduledOperationEditor: View {
                   let accountID, let categoryID else { throw ScheduledOperationError.invalidAmount }
             let value = try Money(decimal, currency: Currency(code: currencyCode.uppercased()))
             if var existingOperation {
-                try existingOperation.update(name: name, amount: value, notes: notes)
+                let scheduleChanged = kind != existingOperation.kind
+                    || accountID != existingOperation.accountID
+                    || categoryID != existingOperation.categoryID
+                    || recurrence != existingOperation.recurrence
+                    || !Calendar.current.isDate(startDate, inSameDayAs: initialEditableStartDate)
+                    || hasEndDate != (existingOperation.endDate != nil)
+                    || (hasEndDate && existingOperation.endDate.map { !Calendar.current.isDate(endDate, inSameDayAs: $0) } == true)
+                let effectiveStartDate = scheduleChanged ? startDate : existingOperation.startDate
+                let effectiveEndDate = scheduleChanged ? (hasEndDate ? endDate : nil) : existingOperation.endDate
+                try existingOperation.update(
+                    name: name, kind: kind, amount: value,
+                    accountID: accountID, categoryID: categoryID,
+                    recurrence: recurrence, startDate: effectiveStartDate,
+                    endDate: effectiveEndDate, notes: notes
+                )
                 try repository.save(existingOperation)
             } else {
                 let operation = try ScheduledOperation(
