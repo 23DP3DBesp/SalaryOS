@@ -35,7 +35,7 @@ private struct CategorySpend: Identifiable {
 }
 
 private enum ReportSection: String, CaseIterable, Identifiable {
-    case header, metrics, cashflow, categories, daily, accounts, recent
+    case header, metrics, cashflow, categories, daily, comparison, accounts, recent
     var id: String { rawValue }
 }
 
@@ -43,6 +43,21 @@ private struct DailySpendPoint: Identifiable {
     let day: Int
     let amount: Double
     var id: Int { day }
+}
+
+private struct YearComparisonRow: Identifiable {
+    let id: UUID
+    let name: String
+    let current: Decimal
+    let previous: Decimal
+}
+
+private struct YearFlowMark: Identifiable {
+    let id: String
+    let month: Int
+    let year: Int
+    let kind: String
+    let amount: Double
 }
 
 @MainActor
@@ -129,13 +144,55 @@ private final class DashboardViewModel {
             return CategorySpend(id: id, name: categories[id]?.name ?? String(localized: "transaction.uncategorized"), amount: amount)
         }.sorted { $0.amount > $1.amount }
     }
+
+    func comparisonRows(year: Int, currency: Currency, kind: CategoryKind, calendar: Calendar) -> [YearComparisonRow] {
+        let current = categoryTotals(year: year, currency: currency, kind: kind, calendar: calendar)
+        let previous = categoryTotals(year: year - 1, currency: currency, kind: kind, calendar: calendar)
+        return Set(current.keys).union(previous.keys).map { id in
+            YearComparisonRow(
+                id: id,
+                name: categories[id]?.name ?? String(localized: "dashboard.report.uncategorized"),
+                current: current[id] ?? .zero,
+                previous: previous[id] ?? .zero
+            )
+        }
+        .filter { $0.current != .zero || $0.previous != .zero }
+        .sorted { abs($0.current) > abs($1.current) }
+    }
+
+    private func categoryTotals(year: Int, currency: Currency, kind: CategoryKind, calendar: Calendar) -> [UUID: Decimal] {
+        guard let start = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
+              let end = calendar.date(from: DateComponents(year: year + 1, month: 1, day: 1)) else { return [:] }
+        var totals: [UUID: Decimal] = [:]
+        for posting in postings where posting.occurredAt >= start && posting.occurredAt < end && posting.entries.first?.money.currency == currency {
+            let ledgerKind: LedgerAccountKind = kind == .expense ? .expense : .income
+            let normalSide: EntrySide = kind == .expense ? .debit : .credit
+            let reverseSide: EntrySide = kind == .expense ? .credit : .debit
+            var sign: Decimal = 1
+            switch posting.kind {
+            case .expense where kind == .expense, .income where kind != .expense: break
+            case .refund where kind == .expense: sign = -1
+            case .reversal:
+                guard let original = postings.first(where: { $0.id == posting.relatedPostingID }) else { continue }
+                if original.kind == .refund && kind == .expense { sign = 1 }
+                else if (original.kind == .expense && kind == .expense) || (original.kind == .income && kind != .expense) { sign = -1 }
+                else { continue }
+            default: continue
+            }
+            let side = sign < 0 ? reverseSide : normalSide
+            for entry in posting.entries where entry.accountKind == ledgerKind && entry.side == side {
+                totals[entry.accountID, default: .zero] += entry.money.amount * sign
+            }
+        }
+        return totals
+    }
 }
 
 struct DashboardView: View {
     @State private var model: DashboardViewModel
     @State private var selectedYear = Calendar.current.component(.year, from: .now)
     @State private var selectedCurrencyCode: String?
-    @AppStorage("dashboard.reportOrder") private var sectionOrderRaw = "header,metrics,cashflow,categories,daily,accounts,recent"
+    @AppStorage("dashboard.reportOrder") private var sectionOrderRaw = "header,metrics,cashflow,categories,daily,comparison,accounts,recent"
     @AppStorage("dashboard.reportHidden") private var hiddenSectionsRaw = ""
     @State private var isConfigurationPresented = false
     let onAddAccount: () -> Void
@@ -158,6 +215,12 @@ struct DashboardView: View {
     }
     private var totalIncome: Decimal { reportMonths.reduce(.zero) { $0 + $1.income } }
     private var totalExpenses: Decimal { reportMonths.reduce(.zero) { $0 + $1.expenses } }
+    private var previousMonths: [ReportMonth] {
+        guard let currency = selectedSummary?.currency else { return [] }
+        return model.months(year: selectedYear - 1, currency: currency, calendar: .current)
+    }
+    private var previousIncome: Decimal { previousMonths.reduce(.zero) { $0 + $1.income } }
+    private var previousExpenses: Decimal { previousMonths.reduce(.zero) { $0 + $1.expenses } }
     private var categorySpending: [CategorySpend] {
         guard let currency = selectedSummary?.currency else { return [] }
         return model.categorySpending(year: selectedYear, currency: currency, calendar: .current)
@@ -234,6 +297,7 @@ struct DashboardView: View {
                 accountRows
                 Button("common.view-all", action: onOpenAccounts).font(.caption)
             }
+        case .comparison: comparisonTables
         case .recent: recentTransactions
         }
     }
@@ -242,7 +306,7 @@ struct DashboardView: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("dashboard.report.eyebrow").font(.caption.weight(.semibold)).foregroundStyle(.secondary).textCase(.uppercase)
-                Text("navigation.dashboard").font(.largeTitle.bold())
+                Text("dashboard.report.title").font(.largeTitle.bold())
                 Text(String(selectedYear)).font(.title3).foregroundStyle(.secondary)
             }
             Spacer()
@@ -269,18 +333,78 @@ struct DashboardView: View {
         }
     }
 
+    private var comparisonTables: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            comparisonTable(title: "dashboard.report.income-summary", kind: .income)
+            comparisonTable(title: "dashboard.report.spending-summary", kind: .expense)
+        }
+    }
+
+    private func comparisonTable(title: LocalizedStringKey, kind: CategoryKind) -> some View {
+        let rows = selectedSummary.map { model.comparisonRows(year: selectedYear, currency: $0.currency, kind: kind, calendar: .current) } ?? []
+        return chartCard(title: title, symbol: kind == .expense ? "arrow.up.right" : "arrow.down.left") {
+            HStack {
+                Text("dashboard.report.total").fontWeight(.semibold)
+                Spacer()
+                Text(String(selectedYear - 1)).foregroundStyle(.secondary)
+                Text(String(selectedYear)).foregroundStyle(.secondary)
+            }
+            .font(.caption.monospacedDigit())
+            HStack {
+                Text("dashboard.report.total").fontWeight(.semibold)
+                Spacer()
+                Text((kind == .expense ? previousExpenses : previousIncome).formatted(.currency(code: selectedSummary?.currency.code ?? "EUR")))
+                Text((kind == .expense ? totalExpenses : totalIncome).formatted(.currency(code: selectedSummary?.currency.code ?? "EUR")))
+            }
+            .font(.caption.monospacedDigit())
+            Divider()
+            ForEach(rows.prefix(8)) { row in
+                HStack(spacing: 8) {
+                    Circle().fill(kind == .expense ? categoryColor(row.id) : .green.opacity(0.72)).frame(width: 9, height: 9)
+                    Text(row.name).lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text(row.previous.formatted(.currency(code: selectedSummary?.currency.code ?? "EUR")))
+                    Text(row.current.formatted(.currency(code: selectedSummary?.currency.code ?? "EUR"))).fontWeight(.medium)
+                }
+                .font(.caption.monospacedDigit())
+            }
+        }
+    }
+
     private var cashflowChart: some View {
-        Chart(reportMonths) { month in
-            BarMark(x: .value("Month", month.date, unit: .month), y: .value("Income", month.incomeValue))
-                .foregroundStyle(Color.green.gradient)
-                .position(by: .value("Series", String(localized: "dashboard.chart.income")))
-            BarMark(x: .value("Month", month.date, unit: .month), y: .value("Expenses", -month.expensesValue))
-                .foregroundStyle(Color.red.opacity(0.58).gradient)
-                .position(by: .value("Series", String(localized: "dashboard.chart.expenses")))
+        Chart(yearFlowMarks) { mark in
+            BarMark(x: .value("Month", mark.month), y: .value("Amount", mark.amount))
+                .foregroundStyle(by: .value("Type", mark.kind))
+                .position(by: .value("Year", String(mark.year)))
         }
         .chartLegend(position: .bottom, alignment: .leading)
-        .chartXAxis { AxisMarks(values: .stride(by: .month)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
+        .chartForegroundStyleScale([
+            String(localized: "dashboard.chart.income"): Color.green,
+            String(localized: "dashboard.chart.expenses"): Color.red.opacity(0.6)
+        ])
+        .chartXAxis {
+            AxisMarks(values: Array(1...12)) { value in
+                AxisValueLabel {
+                    if let month = value.as(Int.self), let date = Calendar.current.date(from: DateComponents(year: selectedYear, month: month, day: 1)) {
+                        Text(date.formatted(.dateTime.month(.abbreviated)))
+                    }
+                }
+            }
+        }
         .frame(height: 230)
+    }
+
+    private var yearFlowMarks: [YearFlowMark] {
+        let years = [(selectedYear - 1, previousMonths), (selectedYear, reportMonths)]
+        return years.flatMap { year, months in
+            months.flatMap { month in
+                let index = Calendar.current.component(.month, from: month.date)
+                return [
+                    YearFlowMark(id: "\(year)-\(index)-income", month: index, year: year, kind: String(localized: "dashboard.chart.income"), amount: month.incomeValue),
+                    YearFlowMark(id: "\(year)-\(index)-expense", month: index, year: year, kind: String(localized: "dashboard.chart.expenses"), amount: -month.expensesValue)
+                ]
+            }
+        }
     }
 
     private var categoryCard: some View {
@@ -560,6 +684,7 @@ private extension ReportSection {
         case .categories: "dashboard.report.categories"
         case .daily: "dashboard.report.daily"
         case .accounts: "dashboard.report.accounts"
+        case .comparison: "dashboard.report.comparison"
         case .recent: "dashboard.widget.recent"
         }
     }

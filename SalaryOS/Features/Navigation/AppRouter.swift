@@ -4,6 +4,7 @@ import SwiftUI
 
 enum AppRoute: String, CaseIterable, Identifiable {
     case dashboard
+    case incomeExpenses
     case accounts
     case transactions
     case salary
@@ -19,6 +20,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
     var title: LocalizedStringKey {
         switch self {
         case .dashboard: "navigation.dashboard"
+        case .incomeExpenses: "dashboard.report.title"
         case .accounts: "navigation.accounts"
         case .transactions: "navigation.transactions"
         case .salary: "navigation.salary"
@@ -34,6 +36,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .dashboard: "square.grid.2x2"
+        case .incomeExpenses: "chart.bar.xaxis"
         case .accounts: "building.columns"
         case .transactions: "list.bullet.rectangle"
         case .salary: "eurosign.circle"
@@ -52,6 +55,8 @@ struct AppRouter: View {
     @State private var selectedRoute: AppRoute = .dashboard
     @State private var isAccountEditorPresented = false
     @State private var isTransactionEditorPresented = false
+    @State private var sidebarAccounts: [Account] = []
+    @State private var sidebarBalances: [UUID: Money] = [:]
 
     var body: some View {
         #if os(iOS)
@@ -104,15 +109,65 @@ struct AppRouter: View {
         }
         #else
         NavigationSplitView {
-            List(AppRoute.allCases, selection: $selectedRoute) { route in
-                Label(route.title, systemImage: route.symbol)
-                    .tag(route)
+            List(selection: $selectedRoute) {
+                Section("sidebar.overview") {
+                    routeRow(.dashboard)
+                }
+                Section {
+                    ForEach(sidebarAccounts) { account in
+                        HStack(spacing: 8) {
+                            Image(systemName: account.type.isLiability ? "creditcard" : "building.columns")
+                                .foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(account.name).lineLimit(1)
+                                Text(account.type.sidebarTitle).font(.caption2).foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 4)
+                            if let balance = sidebarBalances[account.id] {
+                                Text(balance.amount.formatted(.currency(code: balance.currency.code)))
+                                    .font(.caption.monospacedDigit()).lineLimit(1)
+                            }
+                        }
+                        .tag(AppRoute.accounts)
+                    }
+                } header: {
+                    HStack {
+                        Text("sidebar.accounts")
+                        Spacer()
+                        Button {
+                            selectedRoute = .accounts
+                            isAccountEditorPresented = true
+                        } label: {
+                            Image(systemName: "plus").font(.caption.weight(.semibold))
+                        }
+                        .buttonStyle(.plain)
+                        .help("accounts.add")
+                    }
+                }
+                Section("sidebar.activity") {
+                    routeRow(.transactions)
+                }
+                Section("sidebar.planning") {
+                    routeRow(.salary)
+                    routeRow(.budgets)
+                    routeRow(.debts)
+                    routeRow(.savings)
+                    routeRow(.loans)
+                }
+                Section("sidebar.reports") {
+                    routeRow(.incomeExpenses)
+                    routeRow(.workTime)
+                    routeRow(.calendar)
+                }
             }
             .listStyle(.sidebar)
             .navigationTitle(AppConfiguration.displayName)
+            .onAppear(perform: reloadSidebarAccounts)
         } detail: {
             switch selectedRoute {
             case .dashboard:
+                dashboard
+            case .incomeExpenses:
                 dashboard
             case .accounts:
                 AccountsView(repository: repository, isEditorPresented: $isAccountEditorPresented)
@@ -137,6 +192,20 @@ struct AppRouter: View {
         #endif
     }
 
+    private func routeRow(_ route: AppRoute) -> some View {
+        Label(route.title, systemImage: route.symbol)
+            .tag(route)
+    }
+
+    private func reloadSidebarAccounts() {
+        guard let accounts = try? repository.accounts(includeArchived: false) else { return }
+        sidebarAccounts = accounts.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        sidebarBalances = Dictionary(uniqueKeysWithValues: sidebarAccounts.compactMap { account in
+            guard let balance = try? repository.balance(for: account) else { return nil }
+            return (account.id, balance)
+        })
+    }
+
     private var dashboard: some View {
         DashboardView(
             repository: repository,
@@ -152,5 +221,19 @@ struct AppRouter: View {
                 isTransactionEditorPresented = true
             }
         )
+    }
+}
+
+private extension AccountType {
+    var sidebarTitle: LocalizedStringKey {
+        switch self {
+        case .current: "account-type.current"
+        case .savings: "account-type.savings"
+        case .cash: "account-type.cash"
+        case .creditCard: "account-type.credit-card"
+        case .investment: "account-type.investment"
+        case .loan: "account-type.loan"
+        case .other: "account-type.other"
+        }
     }
 }
