@@ -22,7 +22,7 @@
 
 ## Later phases
 
-- Phase 5: debts, loans, budgets, and savings.
+- Phase 5 (in progress): category budgets are persisted and show current-period spending and remaining amount from real ledger data; weekly/monthly/yearly periods supported. Debt and loan management and savings goals remain.
 - Phase 6: work time, recurring operations, calendar, and notifications.
 - Phase 7: backup, import/export, and CloudKit sync.
 - Phase 8: evaluated banking provider boundary and required backend work.

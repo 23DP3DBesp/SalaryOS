@@ -5,7 +5,7 @@ import SwiftData
 @MainActor
 final class AppContainer {
     let modelContainer: ModelContainer
-    let financeRepository: any AccountRepository & CategoryRepository & LedgerRepository
+    let financeRepository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository
 
     init() throws {
         let persistenceStack = try FinancePersistenceStack()

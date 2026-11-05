@@ -5,6 +5,47 @@ import SalaryOSPersistence
 
 final class PersistentFinanceRepositoryTests: XCTestCase {
     @MainActor
+    func testBudgetProgressUsesExpensesAndSubtractsRefunds() throws {
+        let stack = try FinancePersistenceStack(inMemory: true)
+        let repository = stack.repository
+        let eur = try Currency(code: "EUR")
+        let account = try Account(name: "Everyday", type: .current, currency: eur, openingBalance: Money(Decimal(500), currency: eur))
+        let food = try Category(name: "Food", kind: .expense)
+        try repository.save(account)
+        try repository.save(food)
+        let now = Date.now
+        let expense = try LedgerFactory.expense(
+            amount: Money(Decimal(80), currency: eur), from: account,
+            categoryID: food.id, description: "Groceries", occurredAt: now
+        )
+        try repository.post(expense)
+        let refund = try LedgerFactory.refund(
+            amount: Money(Decimal(15), currency: eur), to: account,
+            expenseCategoryID: food.id, originalPostingID: expense.id,
+            description: "Returned item", occurredAt: now
+        )
+        try repository.post(refund)
+        let budget = try Budget(name: "Food", categoryID: food.id, limit: Money(Decimal(100), currency: eur))
+        try repository.save(budget)
+
+        let progress = try repository.progress(for: budget, on: now)
+        XCTAssertEqual(progress.spent.amount, Decimal(65))
+        XCTAssertEqual(progress.remaining.amount, Decimal(35))
+    }
+
+    @MainActor
+    func testBudgetRejectsIncomeCategory() throws {
+        let stack = try FinancePersistenceStack(inMemory: true)
+        let repository = stack.repository
+        let income = try Category(name: "Salary", kind: .salary)
+        try repository.save(income)
+        let budget = try Budget(name: "Invalid", categoryID: income.id, limit: Money(Decimal(100), currency: .eur))
+        XCTAssertThrowsError(try repository.save(budget)) { error in
+            XCTAssertEqual(error as? RepositoryError, .budgetCategoryMustBeExpense(income.id))
+        }
+    }
+
+    @MainActor
     func testPersistsAccountsCategoriesPostingsAndBalance() throws {
         let stack = try FinancePersistenceStack(inMemory: true)
         let repository = stack.repository

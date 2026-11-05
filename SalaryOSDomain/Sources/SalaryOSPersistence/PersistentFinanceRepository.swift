@@ -107,15 +107,52 @@ final class PersistedLedgerPosting {
     }
 }
 
+@Model
+final class PersistedBudget {
+    var id: UUID
+    var name: String
+    var categoryID: UUID
+    var currencyCode: String
+    var limitAmount: Decimal
+    var periodRawValue: String
+    var createdAt: Date
+    var updatedAt: Date
+    var isArchived: Bool
+
+    init(_ budget: Budget) {
+        id = budget.id
+        name = budget.name
+        categoryID = budget.categoryID
+        currencyCode = budget.currency.code
+        limitAmount = budget.limit.amount
+        periodRawValue = budget.period.rawValue
+        createdAt = budget.createdAt
+        updatedAt = budget.updatedAt
+        isArchived = budget.isArchived
+    }
+
+    func domainValue() throws -> Budget {
+        guard let period = BudgetPeriod(rawValue: periodRawValue) else {
+            throw PersistenceMappingError.invalidBudgetPeriod(periodRawValue)
+        }
+        return try Budget(
+            id: id, name: name, categoryID: categoryID,
+            limit: Money(limitAmount, currency: Currency(code: currencyCode)),
+            period: period, createdAt: createdAt, updatedAt: updatedAt, isArchived: isArchived
+        )
+    }
+}
+
 enum PersistenceMappingError: Error {
     case invalidAccountType(String)
     case invalidCategoryKind(String)
     case invalidTransactionKind(String)
+    case invalidBudgetPeriod(String)
 }
 
 /// Keeps each posting and its entries in one persisted record so they are saved atomically.
 @MainActor
-final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository {
+final class PersistentFinanceRepository: AccountRepository, CategoryRepository, LedgerRepository, BudgetRepository {
     private let context: ModelContext
     private let encoder = JSONEncoder()
 
@@ -275,6 +312,56 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
         return try Money(amount, currency: account.currency)
     }
 
+    func save(_ budget: Budget) throws {
+        let categories = try context.fetch(FetchDescriptor<PersistedCategory>())
+        guard let category = categories.first(where: { $0.id == budget.categoryID }),
+              category.kindRawValue == CategoryKind.expense.rawValue else {
+            throw RepositoryError.budgetCategoryMustBeExpense(budget.categoryID)
+        }
+        let records = try context.fetch(FetchDescriptor<PersistedBudget>())
+        try ensureUniqueIDs(records)
+        if let existing = records.first(where: { $0.id == budget.id }) {
+            existing.name = budget.name
+            existing.limitAmount = budget.limit.amount
+            existing.updatedAt = .now
+            existing.isArchived = budget.isArchived
+        } else {
+            context.insert(PersistedBudget(budget))
+        }
+        try commit()
+    }
+
+    func budget(id: UUID) throws -> Budget? {
+        let records = try context.fetch(FetchDescriptor<PersistedBudget>())
+        try ensureUniqueIDs(records)
+        return try records.first(where: { $0.id == id })?.domainValue()
+    }
+
+    func budgets(includeArchived: Bool = false) throws -> [Budget] {
+        let records = try context.fetch(FetchDescriptor<PersistedBudget>())
+        try ensureUniqueIDs(records)
+        return try records.filter { includeArchived || !$0.isArchived }.map { try $0.domainValue() }
+    }
+
+    func progress(for budget: Budget, on date: Date = .now, calendar: Calendar = .current) throws -> BudgetProgress {
+        let interval = try BudgetCalendar.interval(for: budget.period, containing: date, calendar: calendar)
+        let postings = try self.postings(from: interval.start, through: interval.end)
+        var spent = Decimal.zero
+        for posting in postings {
+            guard posting.kind == .expense || posting.kind == .refund else { continue }
+            for entry in posting.entries where entry.accountID == budget.categoryID {
+                guard entry.money.currency == budget.currency else {
+                    throw MoneyError.currencyMismatch(expected: budget.currency.code, actual: entry.money.currency.code)
+                }
+                spent += posting.kind == .expense ? entry.money.amount : -entry.money.amount
+            }
+        }
+        return try BudgetProgress(
+            budget: budget, spent: Money(max(.zero, spent), currency: budget.currency),
+            periodStart: interval.start, periodEnd: interval.end
+        )
+    }
+
 
     private func ensureUniqueIDs<Record: Identifiable>(_ records: [Record]) throws where Record.ID == UUID {
         var identifiers = Set<UUID>()
@@ -392,10 +479,10 @@ final class PersistentFinanceRepository: AccountRepository, CategoryRepository, 
 @MainActor
 public final class FinancePersistenceStack {
     public let modelContainer: ModelContainer
-    public let repository: any AccountRepository & CategoryRepository & LedgerRepository
+    public let repository: any AccountRepository & CategoryRepository & LedgerRepository & BudgetRepository
 
     public init(inMemory: Bool = false) throws {
-        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self])
+        let schema = Schema([PersistedAccount.self, PersistedCategory.self, PersistedLedgerPosting.self, PersistedBudget.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         modelContainer = container

@@ -13,6 +13,7 @@ public enum RepositoryError: Error, Equatable {
     case refundExceedsOriginal(UUID)
     case invalidReversal(UUID)
     case alreadyReversed(UUID)
+    case budgetCategoryMustBeExpense(UUID)
 }
 
 @MainActor
@@ -37,4 +38,12 @@ public protocol LedgerRepository: AnyObject {
     func posting(id: UUID) throws -> LedgerPosting?
     func postings(from start: Date?, through end: Date?) throws -> [LedgerPosting]
     func balance(for account: Account) throws -> Money
+}
+
+@MainActor
+public protocol BudgetRepository: AnyObject {
+    func save(_ budget: Budget) throws
+    func budget(id: UUID) throws -> Budget?
+    func budgets(includeArchived: Bool) throws -> [Budget]
+    func progress(for budget: Budget, on date: Date, calendar: Calendar) throws -> BudgetProgress
 }
